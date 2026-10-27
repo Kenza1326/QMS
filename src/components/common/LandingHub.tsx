@@ -17,7 +17,6 @@ import {
   KeyRound,
   Check,
   Unlock,
-  FileText,
 } from 'lucide-react';
 import { QueueSystemConfig, BrandConfig } from '../../types/queueTypes';
 import { DEFAULT_QUEUE_CONFIG } from '../../config/defaultQueueConfig';
@@ -76,8 +75,8 @@ export const LandingHub: React.FC<LandingHubProps> = ({
       handleProtectedModeClick(mode === 'dashboard' ? 'le Tableau de Bord RA' : 'le Poste Guichetier');
       return;
     }
-    const url = `${window.location.origin}${window.location.pathname}?mode=${mode}`;
-    window.open(url, '_blank');
+    const url = getPublicUrl(`?mode=${mode}`);
+    window.open(url, '_blank', 'noopener');
   };
 
   const handleProtectedModeClick = (modeName: string) => {
@@ -178,18 +177,6 @@ export const LandingHub: React.FC<LandingHubProps> = ({
               {isAdmin && <BarChart3 className="w-3.5 h-3.5 text-blue-400" />}
               <span>Tableau de Bord RA</span>
             </button>
-
-            {/* Direct Link to PDF Guide */}
-            <a
-              href="/guide_test_equipe.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-all cursor-pointer shadow-xs"
-              title="Consulter ou imprimer le guide de test équipe en PDF"
-            >
-              <FileText className="w-3.5 h-3.5 text-blue-600" />
-              <span>Guide Test (PDF)</span>
-            </a>
           </div>
         </div>
       </header>

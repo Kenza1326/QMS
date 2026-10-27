@@ -1,3 +1,4 @@
+import {HourlyAffluenceChart} from './HourlyAffluenceChart';
 import {getQueueTrends} from '../../utils/queueMetrics';
 import {normalizeCustomerName} from '../../utils/queueValidation';
 import {notifications} from '../../services/notificationService';
@@ -419,7 +420,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 w-full space-y-6">
       {/* EXECUTIVE HEADER & SUB-NAVIGATION BAR */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-4">
         {/* TAB BUTTONS */}
@@ -557,17 +558,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Download className="w-3.5 h-3.5" />
             <span>Export Pro (.xlsx)</span>
           </button>
-
-          <a
-            href="/guide_test_equipe.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            title="Consulter ou imprimer le guide de test équipe en PDF"
-          >
-            <FileText className="w-3.5 h-3.5 text-blue-600" />
-            <span>Guide Test (PDF)</span>
-          </a>
 
           {/* STAFF USER AUTH BADGE */}
           <button
@@ -727,9 +717,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* MAIN CHARTS SECTION */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid min-w-0 grid-cols-1 lg:grid-cols-12 gap-6">
             {/* HOURLY AFFLUENCE BAR & WAIT TIME CURVE */}
-            <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <div className="min-w-0 lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -748,57 +738,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Graphic container */}
-              <div className="h-64 pt-6 flex items-end justify-between gap-2 sm:gap-3 border-b border-slate-100 px-2">
-                {hourlyData.map((item) => {
-                  const maxCount = Math.max(1,...hourlyData.map((h) => h.count));
-                  const heightPercent = Math.min(100, Math.round((item.count / maxCount) * 100));
+              <HourlyAffluenceChart data={hourlyData} />
 
-                  return (
-                    <div key={item.slot} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                      {/* Tooltip on hover */}
-                      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded-lg pointer-events-none whitespace-nowrap shadow-lg z-10 font-mono">
-                        {item.count} clients • {item.avgWait} min attente
-                      </div>
-
-                      {/* Wait time badge on top of bar */}
-                      <span className="text-[10px] font-bold font-mono text-slate-600 mb-1 group-hover:text-blue-600">
-                        {item.count}
-                      </span>
-
-                      {/* Bar with gradient and peak hour highlight */}
-                      <div
-                        className={`w-full max-w-[42px] rounded-t-xl transition-all duration-300 group-hover:scale-y-105 origin-bottom shadow-xs ${
-                          item.isPeak
-                            ? 'bg-gradient-to-t from-amber-600 via-amber-500 to-amber-400'
-                            : 'bg-gradient-to-t from-[#003B73] via-blue-600 to-blue-400'
-                        }`}
-                        style={{ height: `${heightPercent}%` }}
-                      />
-
-                      {/* Hour label */}
-                      <span className="text-[10px] sm:text-xs font-semibold text-slate-500 mt-2 font-mono truncate">
-                        {item.slot}
-                      </span>
-
-                      {/* Wait badge */}
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md mt-0.5 ${
-                          item.avgWait > 14
-                            ? 'bg-rose-50 text-rose-700'
-                            : item.avgWait > 10
-                            ? 'bg-amber-50 text-amber-700'
-                            : 'bg-emerald-50 text-emerald-700'
-                        }`}
-                      >
-                        {item.avgWait}m
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="pt-2 flex flex-wrap items-center justify-between text-xs text-slate-500">
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded bg-blue-600 inline-block" />
@@ -814,7 +756,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* SLA GAUGE & BREAKDOWN CARD */}
-            <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div className="min-w-0 lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-black text-slate-900 mb-1 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-emerald-600" />
@@ -832,7 +774,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                       <span className="font-bold text-slate-800">Pris en &lt; 10 min</span>
@@ -840,7 +782,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <strong className="font-mono text-emerald-800">{slaBands[0]}% des clients</strong>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-blue-50/60 border border-blue-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs p-2.5 rounded-xl bg-blue-50/60 border border-blue-100">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                       <span className="font-bold text-slate-800">Entre 10 et 15 min</span>
@@ -848,7 +790,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <strong className="font-mono text-blue-800">{slaBands[1]}% des clients</strong>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-rose-50/60 border border-rose-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs p-2.5 rounded-xl bg-rose-50/60 border border-rose-100">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                       <span className="font-bold text-slate-800">Au-delà de 15 min</span>
@@ -921,7 +863,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'graphs' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid min-w-0 grid-cols-1 lg:grid-cols-12 gap-6">
             {/* INTERACTIVE SVG DONUT CHART */}
             <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
               <div>
@@ -1315,9 +1257,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'satisfaction' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid min-w-0 grid-cols-1 lg:grid-cols-12 gap-6">
             {/* CSAT & NPS OVERVIEW CARD */}
-            <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div className="min-w-0 lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-black text-slate-900 mb-1 flex items-center gap-2">
                   <Star className="w-4 h-4 fill-amber-400 text-amber-400" />

@@ -2,7 +2,6 @@ import { UserAccount, AuthSession } from '../types/queueTypes';
 import { queueStore } from './queueStore';
 
 const AUTH_STORAGE_KEY = 'agb_queue_auth_session_v1';
-const AUTH_CHANNEL_NAME = 'agb_queue_auth_sync';
 
 export const MASTER_PIN = '9999';
 
@@ -88,63 +87,28 @@ export const TEST_USER = CLIENT_USER;
 class AuthService {
   private currentSession: AuthSession | null = null;
   private listeners: Set<(session: AuthSession | null) => void> = new Set();
-  private channel: BroadcastChannel | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          // Check if stored user is still valid, else fallback to CLIENT_USER
-          const exists = DEMO_USERS.find((u) => u.username === parsed?.user?.username || u.id === parsed?.user?.id);
-          this.currentSession = exists ? { ...parsed, user: exists } : {
-            user: CLIENT_USER,
-            token: `token-${Date.now()}`,
-            loginAt: new Date().toISOString(),
-          };
-        } else {
-          // Default initial session: CLIENT_USER (Accès libre Borne, Écran TV & App Mobile)
-          this.currentSession = {
-            user: CLIENT_USER,
-            token: `token-${Date.now()}`,
-            loginAt: new Date().toISOString(),
-          };
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentSession));
-        }
-      } catch (e) {
-        this.currentSession = {
-          user: CLIENT_USER,
-          token: 'token-default',
-          loginAt: new Date().toISOString(),
-        };
-      }
-
-      if ('BroadcastChannel' in window) {
-        this.channel = new BroadcastChannel(AUTH_CHANNEL_NAME);
-        this.channel.onmessage = (event) => {
-          if (event.data?.type === 'AUTH_CHANGED') {
-            this.loadFromStorage();
-          }
-        };
-      }
-
-      window.addEventListener('storage', (e) => {
-        if (e.key === AUTH_STORAGE_KEY) {
-          this.loadFromStorage();
-        }
-      });
-    }
-  }
-
-  private loadFromStorage(): void {
+    const clientSession: AuthSession = {
+      user: CLIENT_USER,
+      token: `token-${Date.now()}`,
+      loginAt: new Date().toISOString(),
+    };
+    this.currentSession = clientSession;
     if (typeof window === 'undefined') return;
     try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      this.currentSession = stored ? JSON.parse(stored) : null;
-      this.notify();
-    } catch (e) {
-      // ignore
+      // Shared legacy logins must never turn a new visitor into staff.
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      const mode = new URLSearchParams(window.location.search).get('mode');
+      const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if ((mode === 'admin' || mode === 'dashboard') && stored) {
+        const parsed = JSON.parse(stored);
+        const user = DEMO_USERS.find((candidate) => candidate.id === parsed?.user?.id);
+        if (user && !user.isClientProfile) this.currentSession = {...parsed, user};
+      }
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentSession));
+    } catch {
+      this.currentSession = clientSession;
     }
   }
 
@@ -303,8 +267,7 @@ class AuthService {
     this.currentSession = session;
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-        this.channel?.postMessage({ type: 'AUTH_CHANGED' });
+        sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
       } catch (e) {}
     }
 
@@ -354,8 +317,7 @@ class AuthService {
 
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentSession));
-        this.channel?.postMessage({ type: 'AUTH_CHANGED' });
+        sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentSession));
       } catch (e) {}
     }
 

@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const root=require('path').resolve(__dirname,'..'),esbuild=require(root+'/node_modules/esbuild');
-const entry="export {BigScreenDisplay} from './src/components/bigscreen/BigScreenDisplay'; export {AdminDashboard} from './src/components/admin/AdminDashboard'; export {getQueueTrends} from './src/utils/queueMetrics'; export {feedbackRatingError} from './src/utils/queueValidation'; export {DEFAULT_QUEUE_CONFIG} from './src/config/defaultQueueConfig'; export {CounterStation} from './src/components/counter/CounterStation'; export {LandingHub} from './src/components/common/LandingHub'; export {renderToStaticMarkup} from 'react-dom/server'; export {createElement} from 'react';";
+const entry="export {HourlyAffluenceChart} from './src/components/admin/HourlyAffluenceChart'; export {BigScreenDisplay} from './src/components/bigscreen/BigScreenDisplay'; export {AdminDashboard} from './src/components/admin/AdminDashboard'; export {getQueueTrends} from './src/utils/queueMetrics'; export {feedbackRatingError} from './src/utils/queueValidation'; export {DEFAULT_QUEUE_CONFIG} from './src/config/defaultQueueConfig'; export {CounterStation} from './src/components/counter/CounterStation'; export {LandingHub} from './src/components/common/LandingHub'; export {renderToStaticMarkup} from 'react-dom/server'; export {createElement} from 'react';";
 const code=esbuild.buildSync({stdin:{contents:entry,resolveDir:root},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text;
 const moduleObject={exports:{}};
 vm.runInNewContext(code,{module:moduleObject,require,console,process,queueMicrotask,setImmediate,clearImmediate,Buffer,TextEncoder,TextDecoder,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,ReadableStream});
@@ -45,7 +45,7 @@ check('rendered counter bounds a legacy 394-character name and preserves its VIP
 check('deployment examples include the selected agency for all three public modes',()=>{
  const config={...x.DEFAULT_QUEUE_CONFIG,selectedAgencyId:'ag-hydra'};
  const html=x.renderToStaticMarkup(x.createElement(x.LandingHub,{config,onSelectMode(){},onSelectAgency(){}}));
- for(const mode of ['screen','kiosk','client'])assert(html.includes('?mode='+mode+'&amp;agency=ag-hydra'));
+ for(const mode of ['screen','kiosk','client'])assert(html.includes('?mode='+mode+'&amp;agency=ag-hydra'));assert(!html.includes('guide_test_equipe'));assert(!html.includes('Guide Test (PDF)'));
 });
 check('unconfirmed remote tickets do not start the throughput observation clock',()=>{
  const early=ticket('remote','2026-10-26T01:00:00Z',0,'pending_presence');early.confirmedAt=null;
@@ -76,7 +76,16 @@ check('dashboard displays waiting, called and actually serving counts separately
  const config=x.DEFAULT_QUEUE_CONFIG,createdAt=new Date().toISOString();
  const q={tickets:['waiting','called','called','in_service'].map((status,i)=>({id:String(i),tokenNumber:'T-'+i,status,createdAt,categoryId:config.categories[0].id})),counters:config.counters,lastCalledTicket:null,recentCalledHistory:[],logs:[]};
  const html=x.renderToStaticMarkup(x.createElement(x.AdminDashboard,{config,queueState:q,onUpdateConfig(){},onSwitchBrand(){}}));
- assert(html.includes('1 en attente • 2 appelé(s) • 1 en service'));
+ assert(html.includes('1 en attente • 2 appelé(s) • 1 en service'));assert(!html.includes('guide_test_equipe'));assert(!html.includes('Guide Test (PDF)'));
+});
+check('empty hourly chart explains that no arrivals have been recorded',()=>{
+ const html=x.renderToStaticMarkup(x.createElement(x.HourlyAffluenceChart,{data:Array.from({length:24},(_,i)=>({slot:i+'h-'+(i+1)+'h',count:0,avgWait:0,isPeak:false}))}));
+ assert(html.includes('role=\"status\"'));assert(html.includes('Aucune arriv'));assert(!html.includes('23h-24h'));
+});
+check('hourly chart retains all 24 hours and actual figures inside its accessible chart region',()=>{
+ const data=Array.from({length:24},(_,i)=>({slot:String(i).padStart(2,'0')+'h-'+String(i+1).padStart(2,'0')+'h',count:i===23?4:0,avgWait:i===23?12:0,isPeak:i===23}));
+ const html=x.renderToStaticMarkup(x.createElement(x.HourlyAffluenceChart,{data}));assert(html.includes('role=\"region\"'));assert(html.includes('tabindex=\"0\"'));
+ for(const item of data)assert(html.includes(item.slot));assert(html.includes('4 clients'));assert(html.includes('12m'));
 });
 console.log(checks+' portal and metrics checks passed');
 

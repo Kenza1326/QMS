@@ -15,7 +15,7 @@ import { CounterStation } from './components/counter/CounterStation';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AuthLoginModal } from './components/common/AuthLoginModal';
 
-type AppMode = 'hub' | 'screen' | 'kiosk' | 'client' | 'admin';
+import {resolveAppRoute, type AppMode} from './utils/appRoute';
 
 export default function App() {
   const [config, setConfig] = useState<QueueSystemConfig>(configService.getConfig());
@@ -24,29 +24,9 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [targetModeForAuth, setTargetModeForAuth] = useState<string | undefined>(undefined);
 
-  const [adminSubView, setAdminSubView] = useState<'counter' | 'dashboard'>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const view = params.get('view');
-      if (view === 'dashboard' || view === 'counter') return view;
-      if (params.get('mode') === 'dashboard') return 'dashboard';
-    }
-    return 'counter';
-  });
-
-  const [currentMode, setCurrentMode] = useState<AppMode>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const modeParam = params.get('mode');
-      if (modeParam === 'dashboard') {
-        return 'admin';
-      }
-      if (modeParam && ['screen', 'kiosk', 'client', 'admin'].includes(modeParam)) {
-        return modeParam as AppMode;
-      }
-    }
-    return 'hub';
-  });
+  const initialRoute = () => resolveAppRoute(typeof window === 'undefined' ? '' : window.location.search);
+  const [adminSubView, setAdminSubView] = useState<'counter' | 'dashboard'>(() => initialRoute().adminSubView);
+  const [currentMode, setCurrentMode] = useState<AppMode>(() => initialRoute().mode);
 
   useEffect(() => () => notifications.dismissAll(), [currentMode, config.selectedAgencyId]);
 
@@ -81,12 +61,9 @@ export default function App() {
     // Handle browser back/forward navigation
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const modeParam = params.get('mode') as AppMode | null;
-      if (modeParam && ['screen', 'kiosk', 'client', 'admin'].includes(modeParam)) {
-        setCurrentMode(modeParam);
-      } else {
-        setCurrentMode('hub');
-      }
+      const route = resolveAppRoute(window.location.search);
+      setCurrentMode(route.mode);
+      setAdminSubView(route.adminSubView);
       setClientTicketQuery(params.get('ticket'));
     };
 
@@ -108,7 +85,7 @@ export default function App() {
     // Update URL query without page reload
     const url = new URL(window.location.href);
     if (mode === 'hub') {
-      url.searchParams.delete('mode');
+      url.searchParams.set('mode', 'hub');
       url.searchParams.delete('ticket');
       url.searchParams.delete('view');
     } else {
@@ -288,10 +265,10 @@ export default function App() {
 
                 {/* D. COUNTER TELLER STATION & RA DASHBOARD (AUTHORIZED STAFF ONLY) */}
                 {currentMode === 'admin' && (
-                  <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+                  <div className="w-full min-w-0 max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
                     {/* Mode sub-switch: Guichetier vs RA Dashboard */}
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           onClick={() => setAdminSubView('counter')}
                           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${

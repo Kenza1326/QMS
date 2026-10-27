@@ -8,7 +8,7 @@ import {normalizeCustomerName, feedbackRatingError, bookingError} from '../utils
 const QUEUE_STORAGE_KEY='capturedoc_queue_tickets_v3',COUNTERS_STORAGE_KEY='capturedoc_queue_counters_v3',LOGS_STORAGE_KEY='capturedoc_queue_audit_logs_v1';
 export function getActiveAuthUser():UserAccount|null {
   if(typeof window==='undefined')return null;
-  try{return JSON.parse(localStorage.getItem('agb_queue_auth_session_v1')||'null')?.user||null;}catch{return null;}
+  try{return JSON.parse(sessionStorage.getItem('agb_queue_auth_session_v1')||'null')?.user||null;}catch{return null;}
 }
 export interface QueueState {
   tickets:QueueTicket[];counters:CounterStation[];lastCalledTicket:QueueTicket|null;logs?:QueueLogEntry[];resetAt?:number;syncStatus?:'connecting'|'online'|'offline';
