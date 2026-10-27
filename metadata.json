@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix Consultation des tickets",
+  "description": "Application de consultation, filtrage et export des tickets d\u0027Achat, Approvisionnement et Facturation avec vues personnalisées et fiches détaillées.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    ""
+  ]
+}

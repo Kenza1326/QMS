@@ -1,0 +1,8 @@
+import {QueueRule} from '../types/queueTypes';
+export function describeQueueRules(rules:QueueRule[]):QueueRule[] {
+  return rules.map((rule)=>{
+    if(rule.code==='R-02')return {...rule,name:'Priorité VIP pondérée & ancienneté',description:'Un ticket VIP reçoit un bonus de score, sans passage en tête garanti. L’ancienneté, les rendez-vous et l’escalade SLA peuvent maintenir un ticket standard plus ancien devant lui. PMR reste en tête si R-01 l’impose.',rationale:'Accélérer les VIP sans effacer la priorité accumulée par les autres clients.',formulaDescription:'Score = attente FIFO + bonus VIP + rendez-vous + SLA + KYC ; comparer les scores après le passage en tête PMR.',parameters:{...rule.parameters,boostFactor:{...rule.parameters.boostFactor,description:'Bonus ajouté au score VIP ; ne garantit pas une position fixe devant les tickets plus anciens.'}}};
+    if(rule.code==='R-09')return {...rule,description:'Un ticket appelé sans prise en charge devient automatiquement Absent après le délai configuré depuis le dernier appel ou rappel. Le guichet est libéré et l’action est auditée. Un service déjà commencé n’expire pas.',formulaDescription:'status === called && aucun début de service && temps depuis dernier appel >= noShowTimeoutSeconds → Absent ; maxRecallsBeforeNoShow limite les rappels manuels.',parameters:{...rule.parameters,maxRecallsBeforeNoShow:{...rule.parameters.maxRecallsBeforeNoShow,description:'Nombre maximal de rappels manuels. Le dernier rappel conserve un délai complet de présentation avant expiration.'},noShowTimeoutSeconds:{...rule.parameters.noShowTimeoutSeconds,description:'Délai après le dernier appel ou rappel, avant passage automatique en Absent si le service n’a pas commencé.'}}};
+    return rule;
+  });
+}

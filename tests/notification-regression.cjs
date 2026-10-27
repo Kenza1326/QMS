@@ -1,0 +1,25 @@
+const root=require('path').resolve(__dirname,'..');
+const esbuild=require(root+'/node_modules/esbuild');
+const vm=require('vm'),assert=require('assert/strict');
+const code=esbuild.buildSync({entryPoints:[root+'/src/services/notificationService.ts'],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text;
+const timers=new Map();let seq=0;
+const context={module:{exports:{}},setTimeout(fn){timers.set(++seq,fn);return seq},clearTimeout(id){timers.delete(id)}};
+vm.runInNewContext(code,context);
+const n=context.module.exports.notifications;let notices=[];n.subscribe(items=>notices=items);
+(async()=>{
+ const input={title:'Vider la file ?',message:'Effacer les tickets.',actionLabel:'Vider',destructive:true};
+ let settled=false;const pending=n.confirmAction(input).then(answer=>{settled=true;return answer});
+ assert.equal(notices.length,1);await Promise.resolve();assert.equal(settled,false);
+ assert.equal(await n.confirmAction(input),false);assert.equal(notices.length,1);
+ n.dismiss(notices[0].id);assert.equal(await pending,false);
+ const accepted=n.confirmAction(input);n.dismiss(notices[0].id,true);assert.equal(await accepted,true);
+ const cancelled=n.confirmAction(input);n.dismissAll();assert.equal(await cancelled,false);
+ n.announce('call-1','Votre tour','Guichet 1');n.dismiss(notices[0].id);n.announce('call-1','Votre tour','Guichet 1');assert.equal(notices.length,0);
+ n.error('Erreur réseau');assert.equal(notices.length,1);for(const fn of [...timers.values()])fn();assert.equal(notices.length,0);
+ console.log('PASS pending confirmations never run automatically');
+ console.log('PASS repeated clicks cannot queue duplicate confirmations');
+ console.log('PASS dismissing or navigating away cancels the action');
+ console.log('PASS accepting resolves only the chosen action');
+ console.log('PASS turn notifications are not repeated after dismissal');
+ console.log('PASS temporary error notifications expire');
+})().catch(error=>{console.error(error);process.exitCode=1});
