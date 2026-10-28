@@ -72,6 +72,8 @@ export interface FeedbackSurvey {
   submittedAt: string;
 }
 
+export type WaitEstimateBasis = 'queue_entry' | 'presence_projection' | 'check_in';
+
 export interface QueueTicket {
   id: string;
   tokenNumber: string; // e.g. 'C-025'
@@ -97,7 +99,12 @@ export interface QueueTicket {
   waitTimeMinutes?: number;
   serviceDurationMinutes?: number;
   initialPeopleAhead?: number;
-  initialEstimatedMinutes?: number;
+  initialEstimatedMinutes?: number | null;
+  initialEstimateComputedAt?: string;
+  initialEstimateBasis?: WaitEstimateBasis;
+  arrivalEstimatedMinutes?: number | null;
+  arrivalPeopleAhead?: number;
+  arrivalEstimateComputedAt?: string;
   feedback?: FeedbackSurvey | null;
   kycDossier?: KycDossier | null;
   agencyId?: string;
@@ -251,7 +258,9 @@ export interface QueueLogEntry {
   customerName?: string;
   customerPhone?: string;
   // Predictions & Operational Performance Metrics
-  predictedWaitMinutes?: number;
+  predictedWaitMinutes?: number | null;
+  estimateComputedAt?: string;
+  estimateBasis?: WaitEstimateBasis;
   peopleAhead?: number;
   realWaitMinutes?: number;
   serviceDurationMinutes?: number;

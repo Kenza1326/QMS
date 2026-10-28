@@ -1,3 +1,4 @@
+import {ParallelServiceNote} from '../common/ParallelServiceNote';
 import {matchesClientTicket} from '../../utils/queueValidation';
 import {kioskPresenceToken} from '../../utils/queueValidation';
 import {CUSTOMER_NAME_MAX_LENGTH, feedbackRatingError} from '../../utils/queueValidation';
@@ -1189,7 +1190,7 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
                   {/* Personnes restantes */}
                   <div>
                     <span className="text-xs text-slate-500 font-medium block">
-                      {myTicket.status === 'pending_presence' ? 'Personnes devant si vous arrivez maintenant' : 'Personnes restantes'}
+                      {myTicket.status === 'pending_presence' ? 'Tickets avant vous si présence validée maintenant' : 'Tickets avant vous (ordre de file)'}
                     </span>
                     <span className="font-mono text-2xl font-black text-slate-900">
                       {myTicket.status === 'booked' ? 'Sur rendez-vous' : estimate.peopleAhead}
@@ -1214,11 +1215,12 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
                     {myTicket.status === 'pending_presence' ? <p className="mt-2 text-xs leading-relaxed text-amber-700">Projection si vous validez votre présence maintenant. Votre place sera attribuée à la borne et peut évoluer avant votre arrivée.</p> : myTicket.status !== 'booked' && (
                       <span className="text-[10px] text-slate-400 mt-1 block">
                         {estimate.estimatedMinutes === null ? 'L’attente sera estimée à la réouverture d’un guichet.' : estimate.estimatedMinutes === 0
-                          ? '✨ Prochain à être appelé'
+                          ? 'Un guichet peut vous appeler dès maintenant'
                           : 'Estimation en direct'}
                       </span>
                     )}
                   </div>
+                  <ParallelServiceNote {...estimate} requiresPresence={myTicket.status === 'pending_presence'} />
                 </div>
               )}
 

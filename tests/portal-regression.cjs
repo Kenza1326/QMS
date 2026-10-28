@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const root=require('path').resolve(__dirname,'..'),esbuild=require(root+'/node_modules/esbuild');
-const entry="export {HourlyAffluenceChart} from './src/components/admin/HourlyAffluenceChart'; export {BigScreenDisplay} from './src/components/bigscreen/BigScreenDisplay'; export {AdminDashboard} from './src/components/admin/AdminDashboard'; export {getQueueTrends} from './src/utils/queueMetrics'; export {feedbackRatingError} from './src/utils/queueValidation'; export {DEFAULT_QUEUE_CONFIG} from './src/config/defaultQueueConfig'; export {CounterStation} from './src/components/counter/CounterStation'; export {LandingHub} from './src/components/common/LandingHub'; export {renderToStaticMarkup} from 'react-dom/server'; export {createElement} from 'react';";
+const entry="export {AuditLogsViewer} from './src/components/admin/AuditLogsViewer'; export {queueStore as auditQueueStore} from './src/services/queueStore'; export {HourlyAffluenceChart} from './src/components/admin/HourlyAffluenceChart'; export {BigScreenDisplay} from './src/components/bigscreen/BigScreenDisplay'; export {AdminDashboard} from './src/components/admin/AdminDashboard'; export {getQueueTrends} from './src/utils/queueMetrics'; export {feedbackRatingError} from './src/utils/queueValidation'; export {DEFAULT_QUEUE_CONFIG} from './src/config/defaultQueueConfig'; export {CounterStation} from './src/components/counter/CounterStation'; export {LandingHub} from './src/components/common/LandingHub'; export {renderToStaticMarkup} from 'react-dom/server'; export {createElement} from 'react';";
 const code=esbuild.buildSync({stdin:{contents:entry,resolveDir:root},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text;
 const moduleObject={exports:{}};
 vm.runInNewContext(code,{module:moduleObject,require,console,process,queueMicrotask,setImmediate,clearImmediate,Buffer,TextEncoder,TextDecoder,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams,ReadableStream});
@@ -86,6 +86,12 @@ check('hourly chart retains all 24 hours and actual figures inside its accessibl
  const data=Array.from({length:24},(_,i)=>({slot:String(i).padStart(2,'0')+'h-'+String(i+1).padStart(2,'0')+'h',count:i===23?4:0,avgWait:i===23?12:0,isPeak:i===23}));
  const html=x.renderToStaticMarkup(x.createElement(x.HourlyAffluenceChart,{data}));assert(html.includes('role=\"region\"'));assert(html.includes('tabindex=\"0\"'));
  for(const item of data)assert(html.includes(item.slot));assert(html.includes('4 clients'));assert(html.includes('12m'));
+});
+check('audit rows show computed estimates separately from real waits, including zero and unavailable',()=>{
+ const actor={id:'system',name:'System',role:'system'},stamp='2026-10-26T10:00:00Z';
+ x.auditQueueStore.logs=[0,null,12].map((value,i)=>({id:'audit-'+i,timestamp:stamp,level:'info',category:'ticket',action:'TICKET_CREATED',message:'Ticket issued',actor,ticketNumber:'C-'+i,predictedWaitMinutes:value,estimateComputedAt:stamp,estimateBasis:'queue_entry',...(i===2?{realWaitMinutes:14,waitDeltaMinutes:2}:{})}));
+ const html=x.renderToStaticMarkup(x.createElement(x.AuditLogsViewer));
+ assert(html.includes('Attente estimée'));assert(html.includes('Attente réelle'));assert(html.includes('0 min'));assert(html.includes('12 min'));assert(html.includes('14 min'));assert(html.includes('Indisponible'));assert(html.includes('dateTime=\"'+stamp+'\"')||html.includes('datetime=\"'+stamp+'\"'));
 });
 console.log(checks+' portal and metrics checks passed');
 

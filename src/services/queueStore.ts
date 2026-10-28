@@ -1,3 +1,4 @@
+import {estimateTicketWait} from './queueEstimate';
 import {calledTicketsNewestFirst,callTime} from './callLifecycle';
 import {QueueTicket, TicketStatus, TicketPriority, CounterStation, FeedbackSurvey, KycDossier, QueueLogEntry, LogLevel, LogCategory, RuleScoreBreakdown, QueueRule, UserAccount, STANDARD_APPOINTMENT_SLOTS} from '../types/queueTypes';
 import {configService} from './configService';
@@ -33,7 +34,9 @@ export type AddLogInput = {
   priority?: TicketPriority;
   customerName?: string;
   customerPhone?: string;
-  predictedWaitMinutes?: number;
+  predictedWaitMinutes?: number | null;
+  estimateComputedAt?: string;
+  estimateBasis?: QueueLogEntry['estimateBasis'];
   peopleAhead?: number;
   realWaitMinutes?: number;
   serviceDurationMinutes?: number;
@@ -149,7 +152,7 @@ class QueueStore {
     if(!op)throw new Error('Opération inconnue.');
     const signature=JSON.stringify([this.agencyId,categoryId,subOperationId,priority,customerName,customerPhone,confirmedAt===null,source]);
     let pending=this.pendingCreations.get(signature);
-    if(!pending){const ticket:QueueTicket={id:this.id(),tokenNumber:'',categoryId,subOperationId,subOperationName:op.labelFr,priority,customerName:normalizeCustomerName(customerName,source==='kiosk'?'Visiteur Borne':'Client Mobile'),customerPhone,agencyId:this.agencyId,status:confirmedAt===null?'pending_presence':'waiting',confirmedAt,createdAt:new Date().toISOString(),feedback:null};const estimate=this.getTicketEstimate(ticket);ticket.initialPeopleAhead=estimate.peopleAhead;ticket.initialEstimatedMinutes=estimate.estimatedMinutes??undefined;pending={ticket,commandId:this.id()};this.pendingCreations.set(signature,pending);}
+    if(!pending){const ticket:QueueTicket={id:this.id(),tokenNumber:'',categoryId,subOperationId,subOperationName:op.labelFr,priority,customerName:normalizeCustomerName(customerName,source==='kiosk'?'Visiteur Borne':'Client Mobile'),customerPhone,agencyId:this.agencyId,status:confirmedAt===null?'pending_presence':'waiting',confirmedAt,createdAt:new Date().toISOString(),feedback:null};pending={ticket,commandId:this.id()};this.pendingCreations.set(signature,pending);}
     const result=await this.command('create',{ticket:pending.ticket,actor:this.actor(source,pending.ticket.customerName)},pending.commandId);
     this.pendingCreations.delete(signature);if(!result.ticket)throw new Error('Le ticket n’existe plus après la réinitialisation.');return result.ticket;
   }
@@ -280,6 +283,8 @@ class QueueStore {
       'Nom Client',
       'Téléphone Client',
       'Attente Estimée Prédite (min)',
+      'Date Calcul Estimation',
+      'Contexte Estimation',
       'Personnes Devant',
       'Attente Réelle Constatée (min)',
       'Écart Attente (min)',
@@ -310,7 +315,9 @@ class QueueStore {
       `"${(l.operationName || '').replace(/"/g, '""')}"`,
       `"${(l.customerName || '').replace(/"/g, '""')}"`,
       `"${(l.customerPhone || '').replace(/"/g, '""')}"`,
-      `"${l.predictedWaitMinutes !== undefined ? l.predictedWaitMinutes : '-'}"`,
+      `"${l.predictedWaitMinutes === null ? 'Indisponible' : l.predictedWaitMinutes !== undefined ? l.predictedWaitMinutes : '-'}"`,
+      `"${l.estimateComputedAt || '-'}"`,
+      `"${l.estimateBasis || '-'}"`,
       `"${l.peopleAhead !== undefined ? l.peopleAhead : '-'}"`,
       `"${l.realWaitMinutes !== undefined ? l.realWaitMinutes : '-'}"`,
       `"${l.waitDeltaMinutes !== undefined ? (l.waitDeltaMinutes > 0 ? `+${l.waitDeltaMinutes}` : l.waitDeltaMinutes) : '-'}"`,
@@ -357,96 +364,9 @@ class QueueStore {
     return `Pointe observée : ${peak}h–${peak+1}h`;
   }
 
-  public getTicketEstimate(ticket: QueueTicket): {
-    peopleAhead: number;
-    estimatedMinutes: number | null;
-  } {
-    if (ticket.status === 'pending_presence') return this.getTicketEstimate({...ticket,status:'waiting',confirmedAt:new Date().toISOString()});
-    if (ticket.status !== 'waiting') {
-      return { peopleAhead: 0, estimatedMinutes: 0 };
-    }
-
+  public getTicketEstimate(ticket: QueueTicket): {peopleAhead: number; estimatedMinutes: number | null} {
     const cfg = configService.getConfig();
-    const effectiveAgency = ticket.agencyId || cfg.selectedAgencyId;
-    const category = cfg.categories.find((c) => c.id === ticket.categoryId);
-    const subOp = category?.subOperations.find((s) => s.id === ticket.subOperationId);
-    const baseDuration = subOp?.estimatedMinutes || 10;
-
-    // Active counters that can serve this ticket's category
-    const activeCounters = this.counters.filter(
-      (c) => c.status !== 'closed' && c.status !== 'paused' && c.assignedCategoryIds.includes(ticket.categoryId)
-    );
-    const numCounters = Math.max(1, activeCounters.length);
-    const idleCountersCount = activeCounters.filter((c) => c.status === 'idle').length;
-
-    // Competing waiting tickets for same category or sharing counters in this agency
-    const competingWaitingTickets = this.tickets.filter((t) => {
-      if (t.status !== 'waiting' || t.id === ticket.id) return false;
-      if (effectiveAgency && t.agencyId && t.agencyId !== effectiveAgency) return false;
-      const sameCat = t.categoryId === ticket.categoryId;
-      const sameCounter = activeCounters.some((c) => c.assignedCategoryIds.includes(t.categoryId));
-      return sameCat || sameCounter;
-    });
-
-    // Rank queue using unified priority scoring (PMR > VIP > Standard, then FIFO)
-    const candidates = new Set([...competingWaitingTickets, ticket].map((t) => t.id));
-    const originalTickets = this.tickets;
-    let rankedQueue: QueueTicket[];
-    try {
-      this.tickets = [...originalTickets.filter((t) => t.id !== ticket.id), ticket];
-      rankedQueue = this.evaluateTicketScores().map((r) => r.ticket).filter((t) => candidates.has(t.id));
-    } finally { this.tickets = originalTickets; }
-    const myRank = rankedQueue.findIndex((t) => t.id === ticket.id);
-    const peopleAhead = Math.max(0, myRank);
-    if (!activeCounters.length) return {peopleAhead, estimatedMinutes:null};
-
-    // In-service tickets currently being served by competing counters
-    const inServiceTickets = this.tickets.filter((t) => {
-      if (t.status !== 'called' && t.status !== 'in_service') return false;
-      if (effectiveAgency && t.agencyId && t.agencyId !== effectiveAgency) return false;
-      return activeCounters.some((c) => c.id === t.counterId || c.assignedCategoryIds.includes(t.categoryId));
-    });
-
-    let estimatedMinutes = 0;
-    if (peopleAhead < idleCountersCount) {
-      return { peopleAhead, estimatedMinutes: 0 };
-    }
-
-    if (inServiceTickets.length > 0) {
-      const remainings = inServiceTickets.map((t) => {
-        const startTime = t.serviceStartedAt || t.calledAt;
-        const elapsedMinutes = startTime
-          ? Math.floor((Date.now() - new Date(startTime).getTime()) / (1000 * 60))
-          : 0;
-        const cat = cfg.categories.find((c) => c.id === t.categoryId);
-        const op = cat?.subOperations.find((s) => s.id === t.subOperationId);
-        const opDur = op?.estimatedMinutes || baseDuration;
-        return Math.max(1, opDur - elapsedMinutes);
-      });
-      const minRemaining = Math.min(...remainings);
-      if (peopleAhead === 0) {
-        estimatedMinutes = minRemaining;
-      } else {
-        estimatedMinutes = Math.max(
-          1,
-          Math.round(minRemaining + (peopleAhead * baseDuration) / numCounters)
-        );
-      }
-    } else {
-      if (peopleAhead === 0) {
-        estimatedMinutes = 0;
-      } else {
-        estimatedMinutes = Math.max(
-          1,
-          Math.round((peopleAhead * baseDuration) / numCounters)
-        );
-      }
-    }
-
-    return {
-      peopleAhead,
-      estimatedMinutes,
-    };
+    return estimateTicketWait({...ticket, agencyId: ticket.agencyId || cfg.selectedAgencyId}, this.tickets, this.counters, cfg.categories, configService.getRules());
   }
 
 

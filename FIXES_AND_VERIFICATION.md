@@ -47,3 +47,19 @@ Refresh every open kiosk, teller, portal and TV tab so all screens use the new c
 R-09 now expires unpresented called tickets after its configurable timeout (default 180 seconds), releases counters and audits automatic absence. Recalls refresh the window; started services do not expire. The server runs a background sweep every second and reconciles requests/restarts. TV call ordering includes completed calls and avoids old-call animations. Called and serving dashboard counts are separate. VIP weighted priority and PMR head-of-line are explicit in the rule base. Per-agency rule edits persist on the server. No native counter confirmation dialogs exist in the current source.
 
 Validation: 90 regression checks, 3 real HTTP checks, TypeScript and production build passed. Real port-3000 state confirmed C-005/P-001 absent, C-012 completed, with two automatic absence audit entries.
+
+
+## Wait estimates and audit snapshots
+
+Waiting time now projects the workload of each eligible counter using the actual operations ahead and the remaining duration of services already started. The selected customer’s own operation duration does not affect their wait before call. Parallel counters, priority, specialization, overflow, agency isolation and unavailable counters are covered.
+
+The shared estimator runs in the browser and on the server. Ticket issuance and check-in save server-computed estimate snapshots with people ahead, calculation time and context. Check-in preserves the earlier pre-presence projection. Audit rows distinguish estimated and actual waits; inspection and CSV/JSON exports include the calculation metadata. Historical entries are preserved.
+
+Validation: 124 regression checks, 3 local HTTP checks, TypeScript checking and production build passed. Isolated browser fixtures confirmed matching ~8-minute kiosk choices and the audit values/timestamp/context.
+
+
+## Queue position and parallel service
+
+The portal and kiosk receipt identify the ahead count as queue order. When a customer can be called immediately despite tickets ahead, they explain that an available counter can serve them in parallel. New visits with only one free counter do not label both queued customers immediate. Equal-timestamp tickets retain their existing FIFO order during estimate recalculation.
+
+Validation: 127 regression checks passed. Isolated browser checks verified 0 ahead/immediate and 1 ahead/immediate with two free counters, and 1 ahead/~8 minutes with one free counter.

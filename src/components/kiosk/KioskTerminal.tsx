@@ -1,3 +1,4 @@
+import {ParallelServiceNote} from '../common/ParallelServiceNote';
 import {notifications} from '../../services/notificationService';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -222,6 +223,8 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
     const estimate = queueStore.getServiceEstimate(selectedCategory.id, subOp.id, isPmrMode ? 'pmr' : 'standard');
     return {text: estimate.estimatedMinutes === null ? 'Guichets indisponibles' : estimate.estimatedMinutes === 0 ? 'Immédiat (< 1 min)' : `~${estimate.estimatedMinutes} min`, count: estimate.peopleAhead};
   };
+
+  const generatedEstimate = generatedTicket ? queueStore.getTicketEstimate(generatedTicket) : null;
 
   // Public LAN URLs (never localhost)
   const clientTrackingUrl = generatedTicket
@@ -490,20 +493,22 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
               {/* ESTIMATE & PEOPLE AHEAD */}
               <div className="grid grid-cols-2 gap-2 my-2 text-xs font-semibold">
                 <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-slate-500 block text-[10px] font-bold">Devant vous</span>
+                  <span className="text-slate-500 block text-[10px] font-bold">Tickets avant vous (ordre de file)</span>
                   <span className="text-slate-900 text-sm font-black font-mono">
-                    {queueStore.getTicketEstimate(generatedTicket).peopleAhead} personne(s)
+                    {generatedEstimate?.peopleAhead ?? 0} ticket(s)
                   </span>
                 </div>
                 <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block text-[10px] font-bold">Temps estimé</span>
                   <span className="text-[#0055D4] text-sm font-black font-mono">
-                    {queueStore.getTicketEstimate(generatedTicket).estimatedMinutes === null ? 'Guichets indisponibles' : queueStore.getTicketEstimate(generatedTicket).estimatedMinutes === 0
+                    {generatedEstimate?.estimatedMinutes === null ? 'Guichets indisponibles' : generatedEstimate?.estimatedMinutes === 0
                       ? 'Immédiat'
-                      : `~${queueStore.getTicketEstimate(generatedTicket).estimatedMinutes} min`}
+                      : `~${generatedEstimate?.estimatedMinutes} min`}
                   </span>
                 </div>
               </div>
+
+              {generatedEstimate && <ParallelServiceNote {...generatedEstimate} />}
 
               {/* QR CODE TO LINK WITH MOBILE APP */}
               <div className="my-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200">

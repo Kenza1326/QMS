@@ -1,12 +1,19 @@
 import {QueueTicket, CounterStation, QueueRule, RuleScoreBreakdown} from '../types/queueTypes';
+// Shared eligibility for actual calls and workload projections.
+export function counterEligibility(ticket: QueueTicket, counter: CounterStation, rules: QueueRule[], categoryWaitingCount: number): {allowed: boolean; appliedRule?: string} {
+  if ((counter.assignedCategoryIds || []).includes(ticket.categoryId)) return {allowed: true, appliedRule: 'R-05'};
+  const overflow = rules.find((rule) => rule.code === 'R-07');
+  if (overflow?.enabled && overflow.parameters?.allowOverflow?.value !== false && categoryWaitingCount >= Number(overflow.parameters?.congestionThreshold?.value || 5)) return {allowed: true, appliedRule: 'R-07'};
+  const specialty = rules.find((rule) => rule.code === 'R-05');
+  return {allowed: !(specialty?.enabled && specialty.parameters?.strictSpecialization?.value !== false)};
+}
+
 export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation[], rules: QueueRule[], counterId?: string, now = Date.now()): RuleScoreBreakdown[] {
     const ruleR01 = rules.find((r) => r.code === 'R-01');
     const ruleR02 = rules.find((r) => r.code === 'R-02');
     const ruleR03 = rules.find((r) => r.code === 'R-03');
     const ruleR04 = rules.find((r) => r.code === 'R-04');
-    const ruleR05 = rules.find((r) => r.code === 'R-05');
     const ruleR06 = rules.find((r) => r.code === 'R-06');
-    const ruleR07 = rules.find((r) => r.code === 'R-07');
     const ruleR12 = rules.find((r) => r.code === 'R-12');
 
     const counter = counterId ? counters.find((c) => c.id === counterId) : undefined;
@@ -17,28 +24,10 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
     for (const ticket of waitingTickets) {
       const appliedRules: string[] = [];
 
-      // Check Counter Specialization (R-05) and Load Balancing / Overflow (R-07)
       if (counter) {
-        const assigned = counter.assignedCategoryIds || [];
-        const isDirectSpecialty = assigned.includes(ticket.categoryId);
-
-        if (!isDirectSpecialty) {
-          // Check R-07 Overflow
-          const overflowEnabled = ruleR07?.enabled && ruleR07?.parameters?.allowOverflow?.value !== false;
-          const congestionLimit = Number(ruleR07?.parameters?.congestionThreshold?.value || 5);
-          const categoryWaitingCount = waitingTickets.filter((t) => t.categoryId === ticket.categoryId).length;
-
-          if (overflowEnabled && categoryWaitingCount >= congestionLimit) {
-            appliedRules.push('R-07');
-          } else {
-            // Cannot be served by this counter if R-05 is enabled
-            if (ruleR05?.enabled && ruleR05?.parameters?.strictSpecialization?.value !== false) {
-              continue;
-            }
-          }
-        } else {
-          appliedRules.push('R-05');
-        }
+        const match = counterEligibility(ticket, counter, rules, waitingTickets.filter((item) => item.categoryId === ticket.categoryId).length);
+        if (!match.allowed) continue;
+        if (match.appliedRule) appliedRules.push(match.appliedRule);
       }
 
       // 1. Base Wait Score (R-04 FIFO)
@@ -70,8 +59,8 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
         const slotBonus = Number(ruleR03?.parameters?.slotPriority?.value || 60);
         const [appH, appM] = ticket.appointmentTime.split(':').map(Number);
         if (!isNaN(appH) && !isNaN(appM)) {
-          const nowDate = new Date();
-          const targetDate = new Date();
+          const nowDate = new Date(now);
+          const targetDate = new Date(now);
           targetDate.setHours(appH, appM, 0, 0);
           const diffMinutes = Math.abs(nowDate.getTime() - targetDate.getTime()) / (1000 * 60);
           if (diffMinutes <= tolMins) {

@@ -1,3 +1,4 @@
+import {formatWaitEstimate,waitEstimateBasisLabel} from '../../services/queueEstimate';
 import {normalizeCustomerName} from '../../utils/queueValidation';
 import {notifications} from '../../services/notificationService';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -381,7 +382,8 @@ export const AuditLogsViewer: React.FC = () => {
                 <th className="py-3 px-3">Ticket / Client</th>
                 <th className="py-3 px-3">Opération Demandée</th>
                 <th className="py-3 px-3">Poste Guichet</th>
-                <th className="py-3 px-3 text-center">Attente (Est. / Réelle)</th>
+                <th className="py-3 px-3 text-center">Attente estimée</th>
+                <th className="py-3 px-3 text-center">Attente réelle</th>
                 <th className="py-3 px-2 text-center">Durée</th>
                 <th className="py-3 px-2 text-right">Inspecter</th>
               </tr>
@@ -389,7 +391,7 @@ export const AuditLogsViewer: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={11} className="py-12 text-center text-slate-400">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                     <p className="font-bold">Aucun événement ne correspond à vos filtres</p>
                   </td>
@@ -502,27 +504,18 @@ export const AuditLogsViewer: React.FC = () => {
                           )}
                         </td>
 
-                        {/* PREDICTED VS REAL WAIT TIME */}
+                        {/* Immutable estimate saved at issuance or check-in. */}
                         <td className="py-3 px-3 text-center whitespace-nowrap">
-                          {log.realWaitMinutes !== undefined || log.predictedWaitMinutes !== undefined ? (
-                            <div className="inline-flex flex-col items-center">
-                              <div className="font-mono text-[11px] font-bold text-slate-800">
-                                {log.realWaitMinutes !== undefined ? `${log.realWaitMinutes}m` : '-'}
-                                <span className="text-[10px] font-normal text-slate-400 mx-1">/</span>
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  {log.predictedWaitMinutes !== undefined ? `${log.predictedWaitMinutes}m est.` : '-'}
-                                </span>
-                              </div>
-                              {log.waitDeltaMinutes !== undefined && log.waitDeltaMinutes !== 0 && (
-                                <span className={`text-[9px] font-bold px-1 rounded ${
-                                  isPositiveDelta ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'
-                                }`}>
-                                  {isPositiveDelta ? `+${log.waitDeltaMinutes}m` : `${log.waitDeltaMinutes}m`}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-300">-</span>
+                          <div className="font-mono text-[11px] font-bold text-indigo-700">{formatWaitEstimate(log.predictedWaitMinutes)}</div>
+                          {log.estimateBasis && <div className="mt-0.5 text-[9px] text-slate-500">{waitEstimateBasisLabel(log.estimateBasis)}</div>}
+                          {log.estimateComputedAt && <time dateTime={log.estimateComputedAt} className="mt-0.5 block text-[9px] font-mono text-slate-400">{new Date(log.estimateComputedAt).toLocaleTimeString('fr-FR')}</time>}
+                        </td>
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="font-mono text-[11px] font-bold text-slate-800">{log.realWaitMinutes !== undefined ? `${log.realWaitMinutes} min` : '—'}</div>
+                          {log.waitDeltaMinutes !== undefined && log.waitDeltaMinutes !== 0 && (
+                            <span className={`text-[9px] font-bold px-1 rounded ${isPositiveDelta ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>
+                              {isPositiveDelta ? `+${log.waitDeltaMinutes} min` : `${log.waitDeltaMinutes} min`}
+                            </span>
                           )}
                         </td>
 
@@ -728,10 +721,18 @@ export const AuditLogsViewer: React.FC = () => {
                   </div>
                   <div className="text-xs space-y-1 pt-1 text-slate-600">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Attente Estimée Prédite :</span>
+                      <span className="text-slate-400">Attente estimée enregistrée :</span>
                       <span className="font-mono font-bold text-slate-800">
-                        {selectedLogForModal.predictedWaitMinutes !== undefined ? `${selectedLogForModal.predictedWaitMinutes} min` : '-'}
+                        {formatWaitEstimate(selectedLogForModal.predictedWaitMinutes)}
                       </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400">Calculée le :</span>
+                      <span className="text-right font-mono text-[10px]">{selectedLogForModal.estimateComputedAt ? new Date(selectedLogForModal.estimateComputedAt).toLocaleString('fr-FR') : '—'}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400">Contexte du calcul :</span>
+                      <span className="text-right font-semibold">{waitEstimateBasisLabel(selectedLogForModal.estimateBasis)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Personnes Devant :</span>

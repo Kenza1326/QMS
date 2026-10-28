@@ -1,3 +1,4 @@
+import {estimateTicketWait,formatWaitEstimate} from '../src/services/queueEstimate';
 import {noShowPolicy,callTime} from '../src/services/callLifecycle';
 import {describeQueueRules} from '../src/config/ruleDescriptions';
 import {DEFAULT_QUEUE_CONFIG} from '../src/config/defaultQueueConfig';
@@ -37,14 +38,20 @@ export function createQueueApi(options:Options) {
   } catch {loadError=true;}
   function event(state:State,request:any,action:string,ticket?:QueueTicket,counter?:CounterStation,details?:any){
     const stamp=new Date(now()).toISOString(), actor=request.actor||{id:'system',name:'Système Agence',role:'system'};
+    const hasArrival = Boolean(ticket?.arrivalEstimateComputedAt);
+    const prediction = hasArrival ? ticket?.arrivalEstimatedMinutes : ticket?.initialEstimatedMinutes;
+    const peopleAhead = hasArrival ? ticket?.arrivalPeopleAhead : ticket?.initialPeopleAhead;
+    const estimateComputedAt = hasArrival ? ticket?.arrivalEstimateComputedAt : ticket?.initialEstimateComputedAt;
+    const estimateBasis = hasArrival ? 'check_in' as const : ticket?.initialEstimateBasis;
     const entry:QueueLogEntry={id:options.id(),timestamp:stamp,level:action==='QUEUE_RESET'||action==='LOGS_CLEARED'?'warn':'info',category:counter?'counter':ticket?'ticket':'system',action,
       message:({TICKET_CREATED:'Ticket émis',APPOINTMENT_BOOKED:'Rendez-vous réservé',TICKET_CALLED:'Ticket appelé',SERVICE_STARTED:'Prise en charge',TICKET_COMPLETED:'Ticket clôturé',TICKET_CANCELLED:'Ticket annulé',TICKET_NOSHOW:'Client absent',ARRIVAL_CONFIRMED:'Présence confirmée',FEEDBACK_SUBMITTED:'Avis enregistré',TICKET_RECALLED:'Ticket rappelé',QUEUE_RESET:'File réinitialisée',LOGS_CLEARED:'Journal vidé',KYC_DOSSIER_UPDATED:'Dossier KYC enregistré',RULES_UPDATED:'Règles opérationnelles enregistrées'} as any)[action]+(ticket?` : ${ticket.tokenNumber} — ${ticket.subOperationName} (${ticket.customerName || 'Visiteur'})`:''),
       actor:{...actor,name:normalizeCustomerName(actor.name,'Système')},ticketId:ticket?.id,ticketNumber:ticket?.tokenNumber,customerName:ticket?.customerName,customerPhone:ticket?.customerPhone,priority:ticket?.priority,operationName:ticket?.subOperationName,
       counterId:counter?.id,counterName:counter?.name,counterNumber:counter?.number,agentName:counter?.agentName,
-      predictedWaitMinutes:ticket?.initialEstimatedMinutes,peopleAhead:ticket?.initialPeopleAhead,realWaitMinutes:ticket?.waitTimeMinutes,serviceDurationMinutes:ticket?.serviceDurationMinutes,
-      ticketCreatedAt:ticket?.createdAt,ticketCalledAt:ticket?.calledAt||undefined,ticketServiceStartedAt:ticket?.serviceStartedAt||undefined,ticketCompletedAt:ticket?.completedAt||undefined,details};
+      predictedWaitMinutes:prediction,peopleAhead,estimateComputedAt,estimateBasis,realWaitMinutes:ticket?.waitTimeMinutes,serviceDurationMinutes:ticket?.serviceDurationMinutes,
+      ticketCreatedAt:ticket?.createdAt,ticketCalledAt:ticket?.calledAt||undefined,ticketServiceStartedAt:ticket?.serviceStartedAt||undefined,ticketCompletedAt:ticket?.completedAt||undefined,details:estimateComputedAt?{...details,waitEstimate:{estimatedMinutes:prediction,peopleAhead,computedAt:estimateComputedAt,basis:estimateBasis,method:'counter-workload-v1'}}:details};
     if(details?.automatic)entry.message+=` (R-09 : délai de ${details.timeoutSeconds} s expiré)`;
-    if(ticket?.waitTimeMinutes!==undefined&&ticket.initialEstimatedMinutes!==undefined)entry.waitDeltaMinutes=ticket.waitTimeMinutes-ticket.initialEstimatedMinutes;
+    if (estimateComputedAt && ['TICKET_CREATED','ARRIVAL_CONFIRMED'].includes(action)) entry.message += ` | Attente estimée : ${formatWaitEstimate(prediction)} ; ${peopleAhead} personne(s) devant`;
+    if(ticket?.waitTimeMinutes!==undefined&&typeof prediction==='number')entry.waitDeltaMinutes=ticket.waitTimeMinutes-prediction;
     state.logs=[entry,...state.logs].slice(0,500);
   }
   function sweepAgency(agency:string):void {
@@ -117,7 +124,12 @@ export function createQueueApi(options:Options) {
       }
       if(!['standard','vip','pmr'].includes(incoming.priority))throw new CommandError(400,'Priorité invalide.');
       const prefix=category.ticketPrefix,max=Math.max(0,...state.tickets.filter((t)=>t.tokenNumber.startsWith(prefix+'-')).map((t)=>Number(t.tokenNumber.slice(prefix.length+1))||0));
-      const ticket:QueueTicket={...incoming,tokenNumber:`${prefix}-${String(max+1).padStart(3,'0')}`,subOperationName:operation.labelFr,createdAt:stamp,confirmedAt:incoming.status==='waiting'?stamp:null,customerName:normalizeCustomerName(incoming.customerName,'Visiteur'),feedback:null,counterId:null,counterName:null,calledAt:null,serviceStartedAt:null,completedAt:null};
+      const ticket:QueueTicket={...incoming,tokenNumber:`${prefix}-${String(max+1).padStart(3,'0')}`,subOperationName:operation.labelFr,createdAt:stamp,confirmedAt:incoming.status==='waiting'?stamp:null,customerName:normalizeCustomerName(incoming.customerName,'Visiteur'),feedback:null,counterId:null,counterName:null,calledAt:null,serviceStartedAt:null,completedAt:null,initialEstimatedMinutes:undefined,initialPeopleAhead:undefined,initialEstimateComputedAt:undefined,initialEstimateBasis:undefined,arrivalEstimatedMinutes:undefined,arrivalPeopleAhead:undefined,arrivalEstimateComputedAt:undefined};
+      if (ticket.status !== 'booked') {
+        const estimate = estimateTicketWait(ticket,state.tickets,state.counters,categories,rules,now());
+        ticket.initialEstimatedMinutes=estimate.estimatedMinutes;ticket.initialPeopleAhead=estimate.peopleAhead;ticket.initialEstimateComputedAt=stamp;
+        ticket.initialEstimateBasis=ticket.status==='pending_presence'?'presence_projection':'queue_entry';
+      }
       state.tickets.push(ticket);event(state,request,ticket.status==='booked'?'APPOINTMENT_BOOKED':'TICKET_CREATED',ticket);return {ticketId:ticket.id,changed:true};
     }
     const counter=state.counters.find((c)=>c.id===request.counterId);
@@ -145,7 +157,10 @@ export function createQueueApi(options:Options) {
       if(ticket.status==='waiting')return {ticketId:ticket.id,changed:false};
       if(!['booked','pending_presence'].includes(ticket.status))return {changed:false};
       if(ticket.appointmentDate&&ticket.appointmentDate!==new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Algiers',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now())))throw new CommandError(409,'La présence pour un rendez-vous doit être confirmée le jour prévu.');
-      ticket.status='waiting';ticket.confirmedAt=stamp;event(state,request,'ARRIVAL_CONFIRMED',ticket);return {ticketId:ticket.id,changed:true};
+      ticket.status='waiting';ticket.confirmedAt=stamp;
+      const estimate=estimateTicketWait(ticket,state.tickets,state.counters,categories,rules,now());
+      ticket.arrivalEstimatedMinutes=estimate.estimatedMinutes;ticket.arrivalPeopleAhead=estimate.peopleAhead;ticket.arrivalEstimateComputedAt=stamp;
+      event(state,request,'ARRIVAL_CONFIRMED',ticket);return {ticketId:ticket.id,changed:true};
     }
     if(action==='cancel'){
       if(terminal(ticket)||ticket.status==='in_service')return {ticketId:ticket.id,changed:false};
