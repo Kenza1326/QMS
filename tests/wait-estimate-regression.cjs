@@ -6,7 +6,7 @@ const m={exports:{}};vm.runInNewContext(source,{module:m,require,console,Date});
 const {estimateTicketWait,DEFAULT_QUEUE_RULES}=m.exports;
 const now=Date.parse('2026-10-26T10:00:00Z'),iso=(value)=>new Date(value).toISOString();
 const categories=[{id:'cash',subOperations:[{id:'withdraw',estimatedMinutes:8},{id:'other',estimatedMinutes:10},{id:'long',estimatedMinutes:20},{id:'longest',estimatedMinutes:30}]},{id:'advice',subOperations:[{id:'advice',estimatedMinutes:15}]}];
-const rules=()=>JSON.parse(JSON.stringify(DEFAULT_QUEUE_RULES)).map(r=>({...r,enabled:!['R-03','R-06','R-07','R-12'].includes(r.code)}));
+const rules=()=>JSON.parse(JSON.stringify(DEFAULT_QUEUE_RULES)).map(r=>({...r,enabled:!['R-03','R-06','R-07','R-12','R-13'].includes(r.code)}));
 const desk=(id='one',extras={})=>({id,number:id==='one'?1:2,name:id,status:'idle',currentTicketId:null,assignedCategoryIds:['cash'],...extras});
 const ticket=(id,op='withdraw',extras={})=>({id,tokenNumber:id,categoryId:'cash',subOperationId:op,subOperationName:op,status:'waiting',priority:'standard',agencyId:'alger',createdAt:iso(now-60000),confirmedAt:iso(now-60000),...extras});
 const target=(op='withdraw',extras={})=>ticket('target',op,{createdAt:iso(now),confirmedAt:iso(now),...extras});
@@ -15,7 +15,7 @@ let checks=0;async function check(name,fn){await fn();checks++;console.log('PASS
 async function oneCounter(allClosed=false){
  const original=makeClient(makeServer()),cfg=original.cfg.getConfig();
  const counters=cfg.counters.map(c=>({...c,status:!allClosed&&c.id===original.desks[0].id?'idle':'closed',currentTicketId:null,serviceStartTime:null}));
- const server=makeServer(JSON.stringify({tickets:[],counters,logs:[]})),a=makeClient(server),b=makeClient(server);await drain();return {server,a,b};
+ const server=makeServer(JSON.stringify({tickets:[],counters,logs:[],rules:rules()})),a=makeClient(server),b=makeClient(server);await drain();return {server,a,b};
 }
 (async()=>{
  await check('the reported 8- and 10-minute choices have the same wait behind the same customer',()=>{

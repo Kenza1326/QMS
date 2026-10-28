@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node tests/queue-regression.cjs && node tests/api-regression.cjs && node tests/concurrency-regression.cjs && node tests/portal-regression.cjs && node tests/presence-regression.cjs && node tests/notification-regression.cjs && node tests/no-show-regression.cjs && node tests/client-entry-regression.cjs && node tests/wait-estimate-regression.cjs",
+    "test": "node tests/queue-regression.cjs && node tests/api-regression.cjs && node tests/concurrency-regression.cjs && node tests/portal-regression.cjs && node tests/presence-regression.cjs && node tests/notification-regression.cjs && node tests/no-show-regression.cjs && node tests/client-entry-regression.cjs && node tests/wait-estimate-regression.cjs && node tests/catalog-regression.cjs && node tests/phone-queue-regression.cjs && node tests/mobile-arrival-regression.cjs",
     "test:http": "node tests/http-regression.cjs"
   },
   "dependencies": {

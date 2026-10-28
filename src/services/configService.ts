@@ -1,3 +1,4 @@
+import {completeBankingCatalog} from '../config/completeBankingCatalog';
 import {describeQueueRules} from '../config/ruleDescriptions';
 import { QueueSystemConfig, BrandConfig, QueueRule } from '../types/queueTypes';
 import {
@@ -57,7 +58,7 @@ class ConfigService {
       if (res.ok) {
         const json = await res.json();
         if (json && json.queueConfig) {
-          this.config = {...json.queueConfig,rules:describeQueueRules(json.queueConfig.rules||DEFAULT_QUEUE_RULES)};
+          this.config = {...json.queueConfig,categories:completeBankingCatalog(json.queueConfig.categories||DEFAULT_QUEUE_CONFIG.categories),rules:describeQueueRules(json.queueConfig.rules||DEFAULT_QUEUE_RULES)};
           this.notify();
           return this.getConfig();
         }
@@ -96,6 +97,9 @@ class ConfigService {
 
         const agency = new URLSearchParams(window.location.search).get('agency') || sessionStorage.getItem('queue_agency');
         if (agency && parsed.agencies.some((a) => a.id === agency)) parsed.selectedAgencyId = agency;
+        const savedCategories = parsed.categories;
+        parsed.categories = completeBankingCatalog(parsed.categories);
+        if (parsed.categories !== savedCategories) localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(parsed));
         for (const category of parsed.categories) {
           const credit = category.subOperations.find((op) => op.id === 'sub-credit-conso-immo');
           const defaults = BANKING_CATEGORIES.flatMap((c) => c.subOperations).find((op) => op.id === 'sub-credit-conso-immo');
@@ -126,7 +130,7 @@ class ConfigService {
   }
 
   public saveConfig(newConfig: QueueSystemConfig): void {
-    newConfig={...newConfig,rules:describeQueueRules(newConfig.rules?.length?newConfig.rules:DEFAULT_QUEUE_RULES)};
+    newConfig={...newConfig,categories:completeBankingCatalog(newConfig.categories),rules:describeQueueRules(newConfig.rules?.length?newConfig.rules:DEFAULT_QUEUE_RULES)};
     this.config = newConfig;
     if (typeof window !== 'undefined') {
       localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(newConfig));

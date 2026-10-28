@@ -121,7 +121,7 @@ export const RulesEngineInterface: React.FC<RulesEngineInterfaceProps> = ({ coun
             </span>
           </div>
           <p className="text-xs text-slate-500 max-w-2xl">
-            Configurez l'intégralité des 12 règles régissant l'algorithme d'ordonnancement bancaire (PMR, VIP, Rendez-vous, FIFO, Habilitations guichet, Escalade SLA et Débordement).
+            Configurez l'intégralité des {rules.length} règles régissant l'algorithme d'ordonnancement bancaire (PMR, VIP, Rendez-vous, FIFO, Habilitations guichet, Escalade SLA et Débordement).
           </p>
           <p className="mt-2 text-xs leading-relaxed text-slate-500">{queueStore.getPriorityPolicyDescription()}</p>
         </div>
@@ -463,6 +463,7 @@ export const RulesEngineInterface: React.FC<RulesEngineInterfaceProps> = ({ coun
 
                       {/* SCORE BREAKDOWN CHIPS */}
                       <div className="flex flex-wrap gap-1 text-[10px] font-mono">
+                        {c.mobileArrival && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-800">App : {c.mobileArrival.count}/{c.mobileArrival.tolerance} · {c.mobileArrival.preserved?'rang conservé':'rang à l’arrivée'}</span>}
                         <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700" title="Attente FIFO">
                           Base FIFO: +{Math.round(c.baseWaitScore)}
                         </span>

@@ -89,6 +89,11 @@ export interface QueueTicket {
   counterId?: string | null;
   counterName?: string | null;
   createdAt: string;
+  origin?: 'app' | 'appointment' | 'kiosk' | 'counter';
+  issuedSequence?: number;
+  arrivalSequence?: number;
+  mobileArrivalCount?: number;
+  mobileArrivalDecision?: {ruleCode:'R-13';enabled:boolean;count:number;tolerance:number;preserved:boolean;effectiveAt:string;effectiveSequence?:number};
   confirmedAt?: string | null;
   calledAt?: string | null;
   lastRecalledAt?: string | null;
@@ -339,6 +344,9 @@ export interface QueueRule {
 
 export interface RuleScoreBreakdown {
   ticket: QueueTicket;
+  mobileArrival?: QueueTicket['mobileArrivalDecision'];
+  effectiveQueueAt?: string;
+  effectiveSequence?: number;
   baseWaitScore: number;
   pmrBonus: number;
   vipBonus: number;

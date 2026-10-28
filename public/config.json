@@ -92,15 +92,51 @@
         "phone": "+213 21 73 80 00",
         "openingHours": "Dimanche - Jeudi : 08h30 - 16h30",
         "hourlyAffluence": [
-          { "hour": "08:30", "percentage": 35, "isPeak": false },
-          { "hour": "09:30", "percentage": 65, "isPeak": false },
-          { "hour": "10:30", "percentage": 95, "isPeak": true },
-          { "hour": "11:30", "percentage": 85, "isPeak": true },
-          { "hour": "12:30", "percentage": 50, "isPeak": false },
-          { "hour": "13:30", "percentage": 60, "isPeak": false },
-          { "hour": "14:30", "percentage": 75, "isPeak": false },
-          { "hour": "15:30", "percentage": 40, "isPeak": false },
-          { "hour": "16:00", "percentage": 25, "isPeak": false }
+          {
+            "hour": "08:30",
+            "percentage": 35,
+            "isPeak": false
+          },
+          {
+            "hour": "09:30",
+            "percentage": 65,
+            "isPeak": false
+          },
+          {
+            "hour": "10:30",
+            "percentage": 95,
+            "isPeak": true
+          },
+          {
+            "hour": "11:30",
+            "percentage": 85,
+            "isPeak": true
+          },
+          {
+            "hour": "12:30",
+            "percentage": 50,
+            "isPeak": false
+          },
+          {
+            "hour": "13:30",
+            "percentage": 60,
+            "isPeak": false
+          },
+          {
+            "hour": "14:30",
+            "percentage": 75,
+            "isPeak": false
+          },
+          {
+            "hour": "15:30",
+            "percentage": 40,
+            "isPeak": false
+          },
+          {
+            "hour": "16:00",
+            "percentage": 25,
+            "isPeak": false
+          }
         ]
       },
       {
@@ -111,15 +147,51 @@
         "phone": "+213 21 60 45 12",
         "openingHours": "Dimanche - Jeudi : 08h30 - 16h30",
         "hourlyAffluence": [
-          { "hour": "08:30", "percentage": 25, "isPeak": false },
-          { "hour": "09:30", "percentage": 55, "isPeak": false },
-          { "hour": "10:30", "percentage": 80, "isPeak": true },
-          { "hour": "11:30", "percentage": 90, "isPeak": true },
-          { "hour": "12:30", "percentage": 45, "isPeak": false },
-          { "hour": "13:30", "percentage": 55, "isPeak": false },
-          { "hour": "14:30", "percentage": 70, "isPeak": false },
-          { "hour": "15:30", "percentage": 30, "isPeak": false },
-          { "hour": "16:00", "percentage": 20, "isPeak": false }
+          {
+            "hour": "08:30",
+            "percentage": 25,
+            "isPeak": false
+          },
+          {
+            "hour": "09:30",
+            "percentage": 55,
+            "isPeak": false
+          },
+          {
+            "hour": "10:30",
+            "percentage": 80,
+            "isPeak": true
+          },
+          {
+            "hour": "11:30",
+            "percentage": 90,
+            "isPeak": true
+          },
+          {
+            "hour": "12:30",
+            "percentage": 45,
+            "isPeak": false
+          },
+          {
+            "hour": "13:30",
+            "percentage": 55,
+            "isPeak": false
+          },
+          {
+            "hour": "14:30",
+            "percentage": 70,
+            "isPeak": false
+          },
+          {
+            "hour": "15:30",
+            "percentage": 30,
+            "isPeak": false
+          },
+          {
+            "hour": "16:00",
+            "percentage": 20,
+            "isPeak": false
+          }
         ]
       },
       {
@@ -130,15 +202,51 @@
         "phone": "+213 41 40 12 34",
         "openingHours": "Dimanche - Jeudi : 08h30 - 16h30",
         "hourlyAffluence": [
-          { "hour": "08:30", "percentage": 30, "isPeak": false },
-          { "hour": "09:30", "percentage": 60, "isPeak": false },
-          { "hour": "10:30", "percentage": 85, "isPeak": true },
-          { "hour": "11:30", "percentage": 80, "isPeak": true },
-          { "hour": "12:30", "percentage": 40, "isPeak": false },
-          { "hour": "13:30", "percentage": 65, "isPeak": false },
-          { "hour": "14:30", "percentage": 70, "isPeak": false },
-          { "hour": "15:30", "percentage": 35, "isPeak": false },
-          { "hour": "16:00", "percentage": 20, "isPeak": false }
+          {
+            "hour": "08:30",
+            "percentage": 30,
+            "isPeak": false
+          },
+          {
+            "hour": "09:30",
+            "percentage": 60,
+            "isPeak": false
+          },
+          {
+            "hour": "10:30",
+            "percentage": 85,
+            "isPeak": true
+          },
+          {
+            "hour": "11:30",
+            "percentage": 80,
+            "isPeak": true
+          },
+          {
+            "hour": "12:30",
+            "percentage": 40,
+            "isPeak": false
+          },
+          {
+            "hour": "13:30",
+            "percentage": 65,
+            "isPeak": false
+          },
+          {
+            "hour": "14:30",
+            "percentage": 70,
+            "isPeak": false
+          },
+          {
+            "hour": "15:30",
+            "percentage": 35,
+            "isPeak": false
+          },
+          {
+            "hour": "16:00",
+            "percentage": 20,
+            "isPeak": false
+          }
         ]
       }
     ],
@@ -284,17 +392,27 @@
             "requiredDocuments": [
               {
                 "id": "doc-id",
-                "label": "Pièce d'identité biométrique",
+                "label": "Pièce d'identité biométrique (CNI / Passeport)",
                 "isMandatory": true
               },
               {
-                "id": "doc-fiches-paie",
-                "label": "3 dernières fiches de paie & ATS",
+                "id": "doc-fiche-paie",
+                "label": "3 dernières fiches de paie ou attestation de revenu",
                 "isMandatory": true
               },
               {
-                "id": "doc-devis",
-                "label": "Facture proforma ou promesse de vente",
+                "id": "doc-releves",
+                "label": "Relevés bancaires des 3 derniers mois",
+                "isMandatory": true
+              },
+              {
+                "id": "doc-attestation-travail",
+                "label": "Attestation de travail récente",
+                "isMandatory": true
+              },
+              {
+                "id": "doc-residence",
+                "label": "Certificat de résidence en cours de validité",
                 "isMandatory": true
               }
             ]
@@ -352,12 +470,17 @@
               },
               {
                 "id": "doc-bilans",
-                "label": "Bilans comptables certifiés des 3 dernières années",
+                "label": "Bilans & états financiers des 2 derniers exercices",
                 "isMandatory": true
               },
               {
                 "id": "doc-statuts",
-                "label": "Statuts de l'entreprise et PV d'assemblée",
+                "label": "Statuts de l'entreprise & PV de nomination du gérant",
+                "isMandatory": true
+              },
+              {
+                "id": "doc-cni-gerant",
+                "label": "Pièce d'identité du gérant ou mandataire habilité",
                 "isMandatory": true
               }
             ]
@@ -472,7 +595,9 @@
         "number": 1,
         "name": "Guichet 01 - Caisse Rapide",
         "agentName": "Amina Benali",
-        "assignedCategoryIds": ["cat-caisse"],
+        "assignedCategoryIds": [
+          "cat-caisse"
+        ],
         "status": "idle"
       },
       {
@@ -480,7 +605,9 @@
         "number": 2,
         "name": "Guichet 02 - Caisse & Devises",
         "agentName": "Karim Haddad",
-        "assignedCategoryIds": ["cat-caisse"],
+        "assignedCategoryIds": [
+          "cat-caisse"
+        ],
         "status": "idle"
       },
       {
@@ -488,7 +615,9 @@
         "number": 3,
         "name": "Guichet 03 - Conseiller Particuliers",
         "agentName": "Samia Mansouri",
-        "assignedCategoryIds": ["cat-particuliers"],
+        "assignedCategoryIds": [
+          "cat-particuliers"
+        ],
         "status": "idle"
       },
       {
@@ -496,7 +625,10 @@
         "number": 4,
         "name": "Guichet 04 - Espace Entreprises & Portefeuille",
         "agentName": "Sofiane Zerrouki",
-        "assignedCategoryIds": ["cat-pro", "cat-portefeuille"],
+        "assignedCategoryIds": [
+          "cat-pro",
+          "cat-portefeuille"
+        ],
         "status": "idle"
       }
     ],

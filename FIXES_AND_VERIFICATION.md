@@ -63,3 +63,31 @@ Validation: 124 regression checks, 3 local HTTP checks, TypeScript checking and 
 The portal and kiosk receipt identify the ahead count as queue order. When a customer can be called immediately despite tickets ahead, they explain that an available counter can serve them in parallel. New visits with only one free counter do not label both queued customers immediate. Equal-timestamp tickets retain their existing FIFO order during estimate recalculation.
 
 Validation: 127 regression checks passed. Isolated browser checks verified 0 ahead/immediate and 1 ahead/immediate with two free counters, and 1 ahead/~8 minutes with one free counter.
+
+
+## Complete kiosk operation catalogue and safe PIN errors
+
+Aligned the published and built-in banking catalogues at 4 caisse, 4 particuliers, 3 professionnels and 3 portefeuille operations. Older saved banking configurations receive missing built-in operations/categories while retaining custom operations and configured values. The kiosk resolves its selected category from the latest configuration, uses a single scrolling area and shows a continuation button when lower choices are off-screen.
+
+Incorrect-PIN responses now use a generic message without credential values or recovery hints.
+
+Validation: 138 regression checks, TypeScript and production build passed. Isolated browser checks compared all phone/kiosk operations, exercised the last operation of each category at 1280x720, 1024x600, 768x1024 in accessibility mode, and 390x844; verified an open category refreshes with catalogue changes; and checked the visible incorrect-PIN error.
+
+
+## Live phone estimates after kiosk check-in
+
+The phone derives queue position and estimated wait from one copied, timestamped server-state update, including current counter workloads and the latest confirmed version of its tracked ticket. This avoids relying on mutable ticket objects or stale pre-presence copies. The phone requests fresh queue state on focus, return from background, restored pages and reconnection; an older pending request cannot block a refresh after a new resume cycle.
+
+Validation: 149 regression checks passed, including 11 phone state/resume checks. Isolated browser sessions running the real app against the queue API confirmed that normal kiosk check-in updates an open phone projection, and priority check-in updates both a confirmed phone ticket and a pending phone projection, without page reload.
+
+## Configurable app-ticket arrival tolerance (R-13)
+
+Added R-13 to the rule base and automatically upgraded saved twelve-rule configurations without resetting existing values. The configurable integer X defaults to 2 (range 0–50). Count other physical check-ins in the same agency and category after app-ticket issuance and before its presence confirmation, including older remote tickets that arrive later and customers already called, completed or cancelled after checking in. Pending tickets and other queues do not count.
+
+At check-in, an app ticket with N <= X keeps its original FIFO anchor; beyond X, or with R-13 disabled, its FIFO anchor is check-in. The count is frozen at confirmation, while changes to X apply to tickets still waiting. Server-generated issuance and arrival sequences resolve same-millisecond events. Arrivals do not interrupt called or serving customers. PMR/VIP and other priority rules remain applicable. Actual waiting time and SLA escalation use physical presence time.
+
+The shared policy drives dispatch, phone estimates, kiosk receipts and the rule simulator. Phone and kiosk explain the retained or check-in rank; check-in and call audit entries record the count, threshold and decision. Client-supplied ordering facts are overwritten by the server.
+
+Appointment tolerance remains separately configurable in minutes under R-03. It now uses the appointment date and Africa/Algiers time. Early arrivals receive the bonus from the window start; arrivals by the grace deadline keep it while waiting that day, rather than losing it because staff service is delayed. Later arrivals do not receive that bonus.
+
+Validation: all 171 regression checks passed, including 22 new tolerance checks; TypeScript checking and production build passed. Isolated real-app browser sessions with the actual queue middleware verified two later kiosk check-ins, retained phone/kiosk rank, editing X through the rule interface, live estimate changes and matching dispatch. The previous physical-FIFO phone-refresh browser scenario also passed with R-13 explicitly disabled. The separate TCP HTTP smoke test was attempted but blocked by sandbox localhost connection permissions (EACCES); it did not reach its assertions.

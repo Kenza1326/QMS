@@ -1,3 +1,4 @@
+import {MobileArrivalNote} from '../common/MobileArrivalNote';
 import {ParallelServiceNote} from '../common/ParallelServiceNote';
 import {notifications} from '../../services/notificationService';
 import React, { useState, useEffect, useRef } from 'react';
@@ -8,6 +9,7 @@ import {
   FileText,
   Accessibility,
   ArrowLeft,
+  ChevronDown,
   Printer,
   QrCode,
   CheckCircle,
@@ -51,7 +53,10 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   const issuingTicket = useRef(false);
   const [presenceProof,setPresenceProof]=useState('');
   const [queueEpoch,setQueueEpoch]=useState(queueStore.getState().resetAt||0);
-  const [selectedCategory, setSelectedCategory] = useState<QueueCategory | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
+  const operationsRef = useRef<HTMLDivElement>(null);
+  const [hasMoreOperations, setHasMoreOperations] = useState(false);
   const [selectedSubOp, setSelectedSubOp] = useState<SubOperation | null>(null);
   const [generatedTicket, setGeneratedTicket] = useState<QueueTicket | null>(null);
   const [isPmrMode, setIsPmrMode] = useState<boolean>(false);
@@ -72,6 +77,26 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   const agencies = config?.agencies?.length ? config.agencies : DEFAULT_QUEUE_CONFIG.agencies;
   const agency = agencies.find((a) => a.id === config?.selectedAgencyId) || agencies[0];
   const categories = config?.categories?.length ? config.categories : DEFAULT_QUEUE_CONFIG.categories;
+  const selectedCategory = categories.find((category) => category.id === selectedCategoryId) || null;
+
+  useEffect(() => {mainScrollRef.current?.scrollTo({top: 0});}, [selectedCategoryId]);
+
+  useEffect(() => {
+    const main = mainScrollRef.current, operations = operationsRef.current;
+    if (!selectedCategory || generatedTicket || !main || !operations) {setHasMoreOperations(false); return;}
+    const update = () => setHasMoreOperations(main.scrollHeight - main.clientHeight - main.scrollTop > 8);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(main); observer?.observe(operations);
+    main.addEventListener('scroll', update, {passive: true});
+    update();
+    return () => {main.removeEventListener('scroll', update); observer?.disconnect();};
+  }, [selectedCategory, generatedTicket, isPmrMode]);
+
+  const showMoreOperations = () => {
+    const main = mainScrollRef.current;
+    if (main) main.scrollBy({top: Math.max(180, main.clientHeight * 0.75), behavior: 'smooth'});
+  };
+
 
   useEffect(()=>{
     let active=true;setPresenceProof('');
@@ -96,7 +121,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   }, [generatedTicket]);
 
   const handleResetToMenu = () => {
-    setSelectedCategory(null);
+    setSelectedCategoryId(null);
     setSelectedSubOp(null);
     setGeneratedTicket(null);
     setCheckInResult(null);
@@ -104,7 +129,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   };
 
   const handleSelectCategory = (cat: QueueCategory) => {
-    setSelectedCategory(cat);
+    setSelectedCategoryId(cat.id);
   };
 
   const handleSelectSubOpAndPrint = async (subOp: SubOperation) => {
@@ -242,7 +267,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
       }`}
     >
       {/* 1. KIOSK BRAND HEADER */}
-      <header className="bg-white border-b-2 border-slate-200/90 px-4 sm:px-6 py-2 sm:py-2.5 shadow-xs flex items-center justify-between shrink-0 select-none">
+      <header className="bg-white border-b-2 border-slate-200/90 px-4 sm:px-6 py-2 sm:py-2.5 shadow-xs flex flex-wrap gap-2 items-center justify-between shrink-0 select-none">
         <div className="flex items-center gap-2.5 sm:gap-3">
           {onBackToHub && (
             <button
@@ -285,10 +310,10 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
       </header>
 
       {/* 2. MAIN KIOSK BODY */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-2 flex flex-col justify-start overflow-y-auto min-h-0">
+      <main ref={mainScrollRef} id="kiosk-main-scroll" aria-label="Opérations et ticket de la borne" tabIndex={0} className="flex-1 min-w-0 max-w-5xl mx-auto w-full px-4 sm:px-6 py-2 flex flex-col justify-start overflow-y-auto overscroll-y-contain min-h-0">
         {/* STEP 1: MAIN MENU */}
         {!selectedCategory && !generatedTicket && (
-          <div className="space-y-3 sm:space-y-4 my-auto">
+          <div className="space-y-3 sm:space-y-4 my-auto w-full shrink-0">
             <div className="text-center">
               <h1
                 className={`font-black text-slate-900 tracking-tight ${
@@ -374,10 +399,10 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
 
         {/* STEP 2: SUB-OPERATION MENU */}
         {selectedCategory && !generatedTicket && (
-          <div className="space-y-3 my-auto flex flex-col max-h-full overflow-hidden">
-            <div className="flex items-center justify-between shrink-0">
+          <div ref={operationsRef} className="space-y-3 my-auto w-full shrink-0 pb-4">
+            <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/95 p-2 shadow-xs">
               <button
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => setSelectedCategoryId(null)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-xs"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
@@ -405,8 +430,12 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
               </p>
             </div>
 
-            {/* SUB-OPERATIONS LIST */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto max-h-[55vh] pr-1 py-1">
+            <p role="status" className="text-center text-xs font-bold text-blue-700">
+              {selectedCategory.subOperations.length} opération{selectedCategory.subOperations.length > 1 ? 's' : ''} disponible{selectedCategory.subOperations.length > 1 ? 's' : ''}
+            </p>
+
+            {/* All operations flow through the single main scroll area. */}
+            <div role="group" aria-label="Opérations disponibles" className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-1">
               {selectedCategory.subOperations.map((subOp) => (
                 <button
                   key={subOp.id}
@@ -509,6 +538,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
               </div>
 
               {generatedEstimate && <ParallelServiceNote {...generatedEstimate} />}
+              <MobileArrivalNote ticket={queueTickets.find(t=>t.id===generatedTicket.id)||generatedTicket} tickets={queueTickets} rules={config.rules||DEFAULT_QUEUE_CONFIG.rules} />
 
               {/* QR CODE TO LINK WITH MOBILE APP */}
               <div className="my-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
@@ -541,8 +571,17 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
         )}
       </main>
 
+      {selectedCategory && !generatedTicket && hasMoreOperations && (
+        <div className="shrink-0 border-t border-blue-100 bg-white px-4 py-2 text-center">
+          <button type="button" onClick={showMoreOperations} aria-controls="kiosk-main-scroll" className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+            <ChevronDown className="h-4 w-4" />
+            Voir la suite des opérations
+          </button>
+        </div>
+      )}
+
       {/* 3. KIOSK FOOTER */}
-      <footer className="bg-white border-t border-slate-200 py-2 px-6 text-center text-xs text-slate-600 flex justify-between items-center font-bold shrink-0 select-none">
+      <footer className="bg-white border-t border-slate-200 py-2 px-6 text-center text-xs text-slate-600 flex flex-wrap gap-2 justify-between items-center font-bold shrink-0 select-none">
         <span>© {config.brand.name} • Borne interactive d'accueil</span>
         <span className="text-slate-800">En cas de besoin, adressez-vous à l'accueil</span>
       </footer>

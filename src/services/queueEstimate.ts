@@ -13,7 +13,7 @@ export function estimateTicketWait(ticket: QueueTicket, tickets: QueueTicket[], 
   // change FIFO order when two arrivals have the same timestamp.
   const waiting = agencyTickets.filter((item) => item.status === 'waiting').map((item) => item.id === candidate.id ? candidate : item);
   if (!waiting.some((item) => item.id === candidate.id)) waiting.push(candidate);
-  const ranked = evaluateTickets(waiting, activeCounters, rules, undefined, now).map((score) => score.ticket);
+  const ranked = evaluateTickets(waiting, activeCounters, rules, undefined, now, agencyTickets).map((score) => score.ticket);
   const counts = new Map<string, number>();
   for (const item of waiting) counts.set(item.categoryId, (counts.get(item.categoryId) || 0) + 1);
   const eligible = (item: QueueTicket, counter: CounterStation) => counterEligibility(item, counter, rules, counts.get(item.categoryId) || 0).allowed;

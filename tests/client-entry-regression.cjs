@@ -38,6 +38,9 @@ check('returning to the default URL resets a saved tab session to Client',()=>{
 check('logout clears staff access in the current tab',()=>{
  const a=load();a.authService.login('admin','9999');a.authService.logout();assert.equal(a.authService.getCurrentUser().role,'client');assert.equal(JSON.parse(a.session.getItem(key)).user.role,'client');
 });
+check('incorrect PIN messages never disclose credential values or recovery hints',()=>{
+ const a=load();for(const account of ['admin','guichet1','guichet2','guichet3','guichet4']){const result=a.authService.login(account,'0000');assert.equal(result.success,false);assert.equal(result.error,'Code PIN incorrect. Veuillez vérifier votre code.');assert(!/\d{4}|master/i.test(result.error))}
+});
 console.log(checks+' client-entry and profile checks passed');
 
 })().catch(error=>{console.error(error);process.exitCode=1});

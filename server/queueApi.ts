@@ -1,3 +1,4 @@
+import {mobileArrivalDecision} from '../src/services/arrivalPolicy';
 import {estimateTicketWait,formatWaitEstimate} from '../src/services/queueEstimate';
 import {noShowPolicy,callTime} from '../src/services/callLifecycle';
 import {describeQueueRules} from '../src/config/ruleDescriptions';
@@ -48,7 +49,8 @@ export function createQueueApi(options:Options) {
       actor:{...actor,name:normalizeCustomerName(actor.name,'Système')},ticketId:ticket?.id,ticketNumber:ticket?.tokenNumber,customerName:ticket?.customerName,customerPhone:ticket?.customerPhone,priority:ticket?.priority,operationName:ticket?.subOperationName,
       counterId:counter?.id,counterName:counter?.name,counterNumber:counter?.number,agentName:counter?.agentName,
       predictedWaitMinutes:prediction,peopleAhead,estimateComputedAt,estimateBasis,realWaitMinutes:ticket?.waitTimeMinutes,serviceDurationMinutes:ticket?.serviceDurationMinutes,
-      ticketCreatedAt:ticket?.createdAt,ticketCalledAt:ticket?.calledAt||undefined,ticketServiceStartedAt:ticket?.serviceStartedAt||undefined,ticketCompletedAt:ticket?.completedAt||undefined,details:estimateComputedAt?{...details,waitEstimate:{estimatedMinutes:prediction,peopleAhead,computedAt:estimateComputedAt,basis:estimateBasis,method:'counter-workload-v1'}}:details};
+      ticketCreatedAt:ticket?.createdAt,ticketCalledAt:ticket?.calledAt||undefined,ticketServiceStartedAt:ticket?.serviceStartedAt||undefined,ticketCompletedAt:ticket?.completedAt||undefined,details:estimateComputedAt?{...details,...(ticket?.mobileArrivalDecision?{mobileArrival:ticket.mobileArrivalDecision}:{}),waitEstimate:{estimatedMinutes:prediction,peopleAhead,computedAt:estimateComputedAt,basis:estimateBasis,method:'counter-workload-v1'}}:details};
+    if(ticket?.mobileArrivalDecision&&['ARRIVAL_CONFIRMED','TICKET_CALLED'].includes(action)){const d=ticket.mobileArrivalDecision;entry.message+=` | R-13 : ${d.count}/${d.tolerance} clients ; ${d.preserved?'rang d’émission conservé':'rang de confirmation'}`;}
     if(details?.automatic)entry.message+=` (R-09 : délai de ${details.timeoutSeconds} s expiré)`;
     if (estimateComputedAt && ['TICKET_CREATED','ARRIVAL_CONFIRMED'].includes(action)) entry.message += ` | Attente estimée : ${formatWaitEstimate(prediction)} ; ${peopleAhead} personne(s) devant`;
     if(ticket?.waitTimeMinutes!==undefined&&typeof prediction==='number')entry.waitDeltaMinutes=ticket.waitTimeMinutes-prediction;
@@ -77,7 +79,7 @@ export function createQueueApi(options:Options) {
     let saved=true;for(const agency of Object.keys(agencies)){try{sweepAgency(agency);}catch{saved=false;}}return saved;
   }
   function execute(state:State,request:any,agency:string):{ticketId?:string; changed?:boolean} {
-    const action=request.action, stamp=new Date(now()).toISOString(), rules:QueueRule[]=state.rules||request.policy?.rules||DEFAULT_QUEUE_CONFIG.rules;
+    const action=request.action, stamp=new Date(now()).toISOString(), rules:QueueRule[]=describeQueueRules(state.rules||request.policy?.rules||DEFAULT_QUEUE_CONFIG.rules);
     const categories=request.policy?.categories||DEFAULT_QUEUE_CONFIG.categories;
     for(const definition of request.policy?.counters||[]){
       const existing=state.counters.find((c)=>c.id===definition.id);
@@ -87,8 +89,8 @@ export function createQueueApi(options:Options) {
     if(action==='configureRules'){
       let updated:QueueRule[];
       if(request.rules){
-        if(!Array.isArray(request.rules)||request.rules.length!==DEFAULT_QUEUE_CONFIG.rules.length||!DEFAULT_QUEUE_CONFIG.rules.every((rule)=>request.rules.some((r:any)=>r.code===rule.code&&r.parameters)))throw new CommandError(400,'Base de règles invalide.');
-        updated=copy(request.rules);
+        if(!Array.isArray(request.rules)||new Set(request.rules.map((r:any)=>r.code)).size!==request.rules.length||request.rules.some((r:any)=>!DEFAULT_QUEUE_CONFIG.rules.some(d=>d.code===r.code))||!DEFAULT_QUEUE_CONFIG.rules.filter(r=>r.code!=='R-13').every((rule)=>request.rules.some((r:any)=>r.code===rule.code&&r.parameters)))throw new CommandError(400,'Base de règles invalide.');
+        updated=copy(request.rules);if(!updated.some(r=>r.code==='R-13'))updated.push(copy(rules.find(r=>r.code==='R-13')!));
       }else{
         updated=copy(rules);const selected=updated.find((r)=>r.id===request.ruleId);if(!selected)throw new CommandError(400,'Règle inconnue.');
         if(typeof request.enabled==='boolean')selected.enabled=request.enabled;
@@ -100,6 +102,8 @@ export function createQueueApi(options:Options) {
           parameter.value=value;
         }
       }
+      const mobile=updated.find(r=>r.code==='R-13')?.parameters?.peopleTolerance?.value;
+      if(!Number.isInteger(mobile)||mobile<0||mobile>50)throw new CommandError(400,'La tolérance doit être un nombre entier entre 0 et 50 clients.');
       state.rules=describeQueueRules(updated);event(state,request,'RULES_UPDATED');return {};
     }
     if(action==='presenceToken'){if(!state.presenceToken)state.presenceToken=options.id();return {};}
@@ -124,7 +128,7 @@ export function createQueueApi(options:Options) {
       }
       if(!['standard','vip','pmr'].includes(incoming.priority))throw new CommandError(400,'Priorité invalide.');
       const prefix=category.ticketPrefix,max=Math.max(0,...state.tickets.filter((t)=>t.tokenNumber.startsWith(prefix+'-')).map((t)=>Number(t.tokenNumber.slice(prefix.length+1))||0));
-      const ticket:QueueTicket={...incoming,tokenNumber:`${prefix}-${String(max+1).padStart(3,'0')}`,subOperationName:operation.labelFr,createdAt:stamp,confirmedAt:incoming.status==='waiting'?stamp:null,customerName:normalizeCustomerName(incoming.customerName,'Visiteur'),feedback:null,counterId:null,counterName:null,calledAt:null,serviceStartedAt:null,completedAt:null,initialEstimatedMinutes:undefined,initialPeopleAhead:undefined,initialEstimateComputedAt:undefined,initialEstimateBasis:undefined,arrivalEstimatedMinutes:undefined,arrivalPeopleAhead:undefined,arrivalEstimateComputedAt:undefined};
+      const ticket:QueueTicket={...incoming,origin:incoming.status==='booked'?'appointment':incoming.status==='pending_presence'?'app':request.actor?.role==='teller'?'counter':'kiosk',issuedSequence:state.revision+1,arrivalSequence:incoming.status==='waiting'?state.revision+1:undefined,mobileArrivalCount:undefined,mobileArrivalDecision:undefined,tokenNumber:`${prefix}-${String(max+1).padStart(3,'0')}`,subOperationName:operation.labelFr,createdAt:stamp,confirmedAt:incoming.status==='waiting'?stamp:null,customerName:normalizeCustomerName(incoming.customerName,'Visiteur'),feedback:null,counterId:null,counterName:null,calledAt:null,serviceStartedAt:null,completedAt:null,initialEstimatedMinutes:undefined,initialPeopleAhead:undefined,initialEstimateComputedAt:undefined,initialEstimateBasis:undefined,arrivalEstimatedMinutes:undefined,arrivalPeopleAhead:undefined,arrivalEstimateComputedAt:undefined};
       if (ticket.status !== 'booked') {
         const estimate = estimateTicketWait(ticket,state.tickets,state.counters,categories,rules,now());
         ticket.initialEstimatedMinutes=estimate.estimatedMinutes;ticket.initialPeopleAhead=estimate.peopleAhead;ticket.initialEstimateComputedAt=stamp;
@@ -147,6 +151,7 @@ export function createQueueApi(options:Options) {
         previous.status='completed';previous.completedAt=stamp;previous.serviceDurationMinutes=previous.serviceStartedAt?Math.max(0,Math.round((now()-Date.parse(previous.serviceStartedAt))/60000)):0;
         event(state,request,'TICKET_COMPLETED',previous,counter,{autoCompletedOnNextCall:true});
       }
+      next.mobileArrivalDecision=mobileArrivalDecision(next,state.tickets,rules,now())||undefined;
       Object.assign(next,{status:'called',calledAt:stamp,lastRecalledAt:null,recallCount:0,callSequence:state.revision+1,counterId:counter.id,counterName:counter.name,waitTimeMinutes:Math.max(0,Math.round((now()-Date.parse(next.confirmedAt||next.createdAt))/60000))});
       Object.assign(counter,{status:'calling',currentTicketId:next.id,serviceStartTime:null});event(state,request,'TICKET_CALLED',next,counter);return {ticketId:next.id,changed:true};
     }
@@ -157,7 +162,9 @@ export function createQueueApi(options:Options) {
       if(ticket.status==='waiting')return {ticketId:ticket.id,changed:false};
       if(!['booked','pending_presence'].includes(ticket.status))return {changed:false};
       if(ticket.appointmentDate&&ticket.appointmentDate!==new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Algiers',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now())))throw new CommandError(409,'La présence pour un rendez-vous doit être confirmée le jour prévu.');
-      ticket.status='waiting';ticket.confirmedAt=stamp;
+      ticket.status='waiting';ticket.confirmedAt=stamp;ticket.arrivalSequence=state.revision+1;
+      const decision=mobileArrivalDecision(ticket,state.tickets,rules,now());
+      if(decision){ticket.mobileArrivalCount=decision.count;ticket.mobileArrivalDecision=decision;}
       const estimate=estimateTicketWait(ticket,state.tickets,state.counters,categories,rules,now());
       ticket.arrivalEstimatedMinutes=estimate.estimatedMinutes;ticket.arrivalPeopleAhead=estimate.peopleAhead;ticket.arrivalEstimateComputedAt=stamp;
       event(state,request,'ARRIVAL_CONFIRMED',ticket);return {ticketId:ticket.id,changed:true};

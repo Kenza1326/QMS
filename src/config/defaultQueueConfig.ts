@@ -260,212 +260,342 @@ export const CAPTUREDOC_SERVICES_COUNTERS: CounterStation[] = [
 // BANKING CATEGORIES (PRESERVED IN FULL)
 export const BANKING_CATEGORIES: QueueCategory[] = [
   {
-    id: 'cat-caisse',
-    code: 'CAISSE',
-    ticketPrefix: 'C',
-    labelFr: 'Opérations de caisse',
-    labelAr: 'عمليات على الصندوق',
-    iconName: 'Banknote',
-    color: '#0055D4',
-    subOperations: [
+    "id": "cat-caisse",
+    "code": "CAISSE",
+    "ticketPrefix": "C",
+    "labelFr": "Opérations de caisse",
+    "labelAr": "عمليات على الصندوق",
+    "iconName": "Banknote",
+    "color": "#E60028",
+    "subOperations": [
       {
-        id: 'sub-retrait-versement-dzd',
-        code: 'RETRAIT_VERS_DZD',
-        labelFr: 'Retrait / versement (DZD)',
-        labelAr: 'سحب / إيداع (دج)',
-        estimatedMinutes: 8,
-        requiredDocuments: [
+        "id": "sub-retrait-versement-dzd",
+        "code": "RETRAIT_VERS_DZD",
+        "labelFr": "Retrait / versement (DZD)",
+        "labelAr": "سحب / إيداع (دج)",
+        "estimatedMinutes": 5,
+        "requiredDocuments": [
           {
-            id: 'doc-id',
-            label: 'Pièce d\'identité biométrique (CNI ou Passeport)',
-            isMandatory: true,
-            description: 'Original en cours de validité',
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique (CNI ou Passeport)",
+            "isMandatory": true,
+            "description": "Original en cours de validité"
           },
           {
-            id: 'doc-cheque',
-            label: 'Chèque ou bordereau de versement',
-            isMandatory: true,
-          },
-        ],
+            "id": "doc-cheque",
+            "label": "Chèque ou bordereau de versement",
+            "isMandatory": true,
+            "description": "Chèque signé ou bordereau dûment rempli"
+          }
+        ]
       },
       {
-        id: 'sub-autres-dzd',
-        code: 'AUTRES_DZD',
-        labelFr: 'Autres opérations DZD',
-        labelAr: 'عمليات أخرى دج',
-        estimatedMinutes: 10,
-        requiredDocuments: [
+        "id": "sub-autres-dzd",
+        "code": "AUTRES_DZD",
+        "labelFr": "Autres opérations DZD",
+        "labelAr": "عمليات أخرى دج",
+        "estimatedMinutes": 7,
+        "requiredDocuments": [
           {
-            id: 'doc-id',
-            label: 'Pièce d\'identité biométrique',
-            isMandatory: true,
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
           },
-        ],
+          {
+            "id": "doc-justif",
+            "label": "Justificatif de l'opération",
+            "isMandatory": false
+          }
+        ]
       },
       {
-        id: 'sub-retrait-versement-devise',
-        code: 'RETRAIT_VERS_DEVISE',
-        labelFr: 'Retrait / versement devise',
-        labelAr: 'سحب / إيداع عملة صعبة',
-        estimatedMinutes: 12,
-        requiredDocuments: [
+        "id": "sub-retrait-versement-devise",
+        "code": "RETRAIT_VERS_DEVISE",
+        "labelFr": "Retrait / versement devise",
+        "labelAr": "سحب / إيداع عملة صعبة",
+        "estimatedMinutes": 8,
+        "requiredDocuments": [
           {
-            id: 'doc-id',
-            label: 'Pièce d\'identité biométrique',
-            isMandatory: true,
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
           },
-        ],
+          {
+            "id": "doc-justif-devise",
+            "label": "Déclaration douanière ou titre de voyage (si versement)",
+            "isMandatory": false
+          }
+        ]
       },
       {
-        id: 'sub-allocations-devises',
-        code: 'ALLOCATIONS_DEVISES',
-        labelFr: 'Autres opérations Devise (allocations)',
-        labelAr: 'عمليات أخرى عملة صعبة (منحة سياحية)',
-        estimatedMinutes: 15,
-        requiredDocuments: [
+        "id": "sub-allocations-devises",
+        "code": "ALLOCATIONS_DEVISES",
+        "labelFr": "Autres opérations Devise (allocations)",
+        "labelAr": "عمليات أخرى عملة صعبة (منحة سياحية)",
+        "estimatedMinutes": 10,
+        "requiredDocuments": [
           {
-            id: 'doc-passeport',
-            label: 'Passeport en cours de validité',
-            isMandatory: true,
+            "id": "doc-passeport",
+            "label": "Passeport en cours de validité",
+            "isMandatory": true
           },
           {
-            id: 'doc-billet',
-            label: 'Billet de transport aller-retour',
-            isMandatory: true,
+            "id": "doc-billet",
+            "label": "Billet de transport aller-retour",
+            "isMandatory": true
           },
-        ],
-      },
-    ],
+          {
+            "id": "doc-quittance",
+            "label": "Quittance fiscale de droit de timbre",
+            "isMandatory": true
+          }
+        ]
+      }
+    ]
   },
   {
-    id: 'cat-particuliers',
-    code: 'PARTICULIERS',
-    ticketPrefix: 'P',
-    labelFr: 'Services aux particuliers',
-    labelAr: 'خدمات للأفراد',
-    iconName: 'UserCheck',
-    color: '#0055D4',
-    subOperations: [
+    "id": "cat-particuliers",
+    "code": "PARTICULIERS",
+    "ticketPrefix": "P",
+    "labelFr": "Services aux particuliers",
+    "labelAr": "خدمات للأفراد",
+    "iconName": "UserCheck",
+    "color": "#003B73",
+    "subOperations": [
       {
-        id: 'sub-ouverture-compte',
-        code: 'ENTREE_RELATION',
-        labelFr: 'Entrée en relation (Ouverture de compte)',
-        labelAr: 'بدء العلاقة المصرفية / فتح حساب',
-        estimatedMinutes: 20,
-        requiredDocuments: [
+        "id": "sub-ouverture-compte",
+        "code": "ENTREE_RELATION",
+        "labelFr": "Entrée en relation (Ouverture de compte)",
+        "labelAr": "بدء العلاقة المصرفية / فتح حساب",
+        "estimatedMinutes": 15,
+        "requiredDocuments": [
           {
-            id: 'doc-cni',
-            label: 'Pièce d\'identité biométrique',
-            isMandatory: true,
+            "id": "doc-cni",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
           },
           {
-            id: 'doc-residence',
-            label: 'Certificat de résidence (- de 3 mois)',
-            isMandatory: true,
+            "id": "doc-residence",
+            "label": "Certificat de résidence (- de 3 mois)",
+            "isMandatory": true
           },
-        ],
+          {
+            "id": "doc-travail",
+            "label": "Fiche de paie ou attestation de travail",
+            "isMandatory": true
+          },
+          {
+            "id": "doc-photos",
+            "label": "2 photos d'identité récentes",
+            "isMandatory": true
+          }
+        ]
       },
       {
-        id: 'sub-credit-conso-immo',
-        code: 'CREDIT_CONSO_IMMO',
-        labelFr: 'Demande de crédit immobilier / consommation',
-        labelAr: 'طلب قرض استهلاكي أو عقاري',
-        estimatedMinutes: 20,
-        requiredDocuments: [
+        "id": "sub-credit-conso-immo",
+        "code": "CREDIT_CONSO_IMMO",
+        "labelFr": "Demande de crédit immobilier / consommation",
+        "labelAr": "طلب قرض استهلاكي أو عقاري",
+        "estimatedMinutes": 20,
+        "requiredDocuments": [
           {
-            id: 'doc-id',
-            label: 'Pièce d\'identité biométrique (CNI / Passeport)',
-            isMandatory: true,
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique (CNI / Passeport)",
+            "isMandatory": true
           },
           {
-            id: 'doc-fiche-paie',
-            label: '3 dernières fiches de paie ou attestation de revenu',
-            isMandatory: true,
+            "id": "doc-fiche-paie",
+            "label": "3 dernières fiches de paie ou attestation de revenu",
+            "isMandatory": true
           },
           {
-            id: 'doc-releves',
-            label: 'Relevés bancaires des 3 derniers mois',
-            isMandatory: true,
+            "id": "doc-releves",
+            "label": "Relevés bancaires des 3 derniers mois",
+            "isMandatory": true
           },
           {
-            id: 'doc-attestation-travail',
-            label: 'Attestation de travail récente',
-            isMandatory: true,
+            "id": "doc-attestation-travail",
+            "label": "Attestation de travail récente",
+            "isMandatory": true
           },
           {
-            id: 'doc-residence',
-            label: 'Certificat de résidence en cours de validité',
-            isMandatory: true,
-          },
-        ],
+            "id": "doc-residence",
+            "label": "Certificat de résidence en cours de validité",
+            "isMandatory": true
+          }
+        ]
       },
-    ],
+      {
+        "id": "sub-moyens-paiement",
+        "code": "MOYENS_PAIEMENT",
+        "labelFr": "Cartes bancaires (CIB/Visa) & Chéquiers",
+        "labelAr": "البطاقات البنكية ودفاتر الشيكات",
+        "estimatedMinutes": 8,
+        "requiredDocuments": [
+          {
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
+          }
+        ]
+      },
+      {
+        "id": "sub-reclamation-conseil",
+        "code": "RECLAMATION_CONSEIL",
+        "labelFr": "Conseil client & Réclamations",
+        "labelAr": "استشارات وشكاوى الزبائن",
+        "estimatedMinutes": 10,
+        "requiredDocuments": [
+          {
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
+          }
+        ]
+      }
+    ]
   },
   {
-    id: 'cat-pro',
-    code: 'PROFESSIONNELS',
-    ticketPrefix: 'PRO',
-    labelFr: 'Services aux professionnels',
-    labelAr: 'خدمات للمهنيين',
-    iconName: 'Briefcase',
-    color: '#FFB800',
-    subOperations: [
+    "id": "cat-pro",
+    "code": "PROFESSIONNELS",
+    "ticketPrefix": "PRO",
+    "labelFr": "Services aux professionnels",
+    "labelAr": "خدمات للمهنيين",
+    "iconName": "Briefcase",
+    "color": "#C99700",
+    "subOperations": [
       {
-        id: 'sub-financement-pro',
-        code: 'FINANCEMENT_PRO',
-        labelFr: 'Financement d\'entreprise & Investissement',
-        labelAr: 'تمويل المؤسسات والاستثمار',
-        estimatedMinutes: 25,
-        requiredDocuments: [
+        "id": "sub-financement-pro",
+        "code": "FINANCEMENT_PRO",
+        "labelFr": "Financement d'entreprise & Investissement",
+        "labelAr": "تمويل المؤسسات والاستثمار",
+        "estimatedMinutes": 25,
+        "requiredDocuments": [
           {
-            id: 'doc-rc',
-            label: 'Registre de commerce électronique',
-            isMandatory: true,
+            "id": "doc-rc",
+            "label": "Registre de commerce électronique",
+            "isMandatory": true
           },
           {
-            id: 'doc-bilans',
-            label: 'Bilans & états financiers des 2 derniers exercices',
-            isMandatory: true,
+            "id": "doc-bilans",
+            "label": "Bilans & états financiers des 2 derniers exercices",
+            "isMandatory": true
           },
           {
-            id: 'doc-statuts',
-            label: 'Statuts de l\'entreprise & PV de nomination du gérant',
-            isMandatory: true,
+            "id": "doc-statuts",
+            "label": "Statuts de l'entreprise & PV de nomination du gérant",
+            "isMandatory": true
           },
           {
-            id: 'doc-cni-gerant',
-            label: 'Pièce d\'identité du gérant ou mandataire habilité',
-            isMandatory: true,
-          },
-        ],
+            "id": "doc-cni-gerant",
+            "label": "Pièce d'identité du gérant ou mandataire habilité",
+            "isMandatory": true
+          }
+        ]
       },
-    ],
+      {
+        "id": "sub-commerce-international",
+        "code": "COMMERCE_INT",
+        "labelFr": "Commerce international (Credoc, Remdoc)",
+        "labelAr": "التجارة الخارجية والاعتمادات المستندية",
+        "estimatedMinutes": 20,
+        "requiredDocuments": [
+          {
+            "id": "doc-domiciliation",
+            "label": "Facture domiciliée & D10 douanier",
+            "isMandatory": true
+          },
+          {
+            "id": "doc-certif",
+            "label": "Certificat d'origine & liste de colisage",
+            "isMandatory": true
+          }
+        ]
+      },
+      {
+        "id": "sub-gestion-flux-tpe",
+        "code": "GESTION_FLUX_TPE",
+        "labelFr": "Gestion des flux & Terminaux TPE / e-Paiement",
+        "labelAr": "إدارة السيولة وأجهزة الدفع الإلكتروني TPE",
+        "estimatedMinutes": 12,
+        "requiredDocuments": [
+          {
+            "id": "doc-id-gerant",
+            "label": "Pièce d'identité du gérant",
+            "isMandatory": true
+          },
+          {
+            "id": "doc-rib-pro",
+            "label": "RIB du compte professionnel",
+            "isMandatory": true
+          }
+        ]
+      }
+    ]
   },
   {
-    id: 'cat-portefeuille',
-    code: 'PORTEFEUILLE',
-    ticketPrefix: 'PF',
-    labelFr: 'Opérations portefeuille (chèques, traites)',
-    labelAr: 'عمليات المحفظة (شيكات، كمبيالات)',
-    iconName: 'FileText',
-    color: '#475569',
-    subOperations: [
+    "id": "cat-portefeuille",
+    "code": "PORTEFEUILLE",
+    "ticketPrefix": "PF",
+    "labelFr": "Opérations portefeuille (chèques, traites)",
+    "labelAr": "عمليات المحفظة (شيكات، كمبيالات)",
+    "iconName": "FileText",
+    "color": "#475569",
+    "subOperations": [
       {
-        id: 'sub-remise-cheques',
-        code: 'REMISE_CHEQUES',
-        labelFr: 'Remise de chèques à l\'encaissement',
-        labelAr: 'إيداع الشيكات للتحصيل',
-        estimatedMinutes: 10,
-        requiredDocuments: [
+        "id": "sub-remise-cheques",
+        "code": "REMISE_CHEQUES",
+        "labelFr": "Remise de chèques à l'encaissement",
+        "labelAr": "إيداع الشيكات للتحصيل",
+        "estimatedMinutes": 6,
+        "requiredDocuments": [
           {
-            id: 'doc-cheques',
-            label: 'Chèques endossés (signature au verso)',
-            isMandatory: true,
+            "id": "doc-cheques",
+            "label": "Chèques endossés (signature au verso)",
+            "isMandatory": true
           },
-        ],
+          {
+            "id": "doc-bordereau",
+            "label": "Bordereau de remise complété",
+            "isMandatory": true
+          }
+        ]
       },
-    ],
-  },
+      {
+        "id": "sub-encaissement-effets",
+        "code": "ENCAISSEMENT_EFFETS",
+        "labelFr": "Encaissement traites & effets de commerce",
+        "labelAr": "تحصيل الكمبيالات والسندات للأمر",
+        "estimatedMinutes": 10,
+        "requiredDocuments": [
+          {
+            "id": "doc-traites",
+            "label": "Effets originaux signés et acceptés",
+            "isMandatory": true
+          }
+        ]
+      },
+      {
+        "id": "sub-regularisation-rejets",
+        "code": "REGUL_REJETS",
+        "labelFr": "Régularisation d'incidents & rejets",
+        "labelAr": "تسوية حوادث الدفع والرفض",
+        "estimatedMinutes": 15,
+        "requiredDocuments": [
+          {
+            "id": "doc-id",
+            "label": "Pièce d'identité biométrique",
+            "isMandatory": true
+          },
+          {
+            "id": "doc-avis-rejet",
+            "label": "Avis de rejet reçu",
+            "isMandatory": true
+          }
+        ]
+      }
+    ]
+  }
 ];
 
 export const BANKING_COUNTERS: CounterStation[] = [

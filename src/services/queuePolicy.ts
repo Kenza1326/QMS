@@ -1,4 +1,5 @@
 import {QueueTicket, CounterStation, QueueRule, RuleScoreBreakdown} from '../types/queueTypes';
+import {mobileArrivalDecision,isAppTicket,appointmentWithinTolerance} from './arrivalPolicy';
 // Shared eligibility for actual calls and workload projections.
 export function counterEligibility(ticket: QueueTicket, counter: CounterStation, rules: QueueRule[], categoryWaitingCount: number): {allowed: boolean; appliedRule?: string} {
   if ((counter.assignedCategoryIds || []).includes(ticket.categoryId)) return {allowed: true, appliedRule: 'R-05'};
@@ -8,7 +9,7 @@ export function counterEligibility(ticket: QueueTicket, counter: CounterStation,
   return {allowed: !(specialty?.enabled && specialty.parameters?.strictSpecialization?.value !== false)};
 }
 
-export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation[], rules: QueueRule[], counterId?: string, now = Date.now()): RuleScoreBreakdown[] {
+export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation[], rules: QueueRule[], counterId?: string, now = Date.now(), contextTickets = tickets): RuleScoreBreakdown[] {
     const ruleR01 = rules.find((r) => r.code === 'R-01');
     const ruleR02 = rules.find((r) => r.code === 'R-02');
     const ruleR03 = rules.find((r) => r.code === 'R-03');
@@ -18,7 +19,7 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
 
     const counter = counterId ? counters.find((c) => c.id === counterId) : undefined;
 
-    const waitingTickets = tickets.filter((t) => t.status === 'waiting');
+    const waitingTickets = tickets.filter((t) => t.status === 'waiting' && (!(isAppTicket(t) || t.appointmentTime) || Boolean(t.confirmedAt)));
     const breakdowns: RuleScoreBreakdown[] = [];
 
     for (const ticket of waitingTickets) {
@@ -32,8 +33,13 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
 
       // 1. Base Wait Score (R-04 FIFO)
       const waitMinutes = Math.max(0, Math.floor((now - new Date(ticket.confirmedAt || ticket.createdAt).getTime()) / (1000 * 60)));
+      const mobileArrival=mobileArrivalDecision(ticket,contextTickets,rules,now);
+      const effectiveQueueAt=mobileArrival?.effectiveAt||ticket.confirmedAt||ticket.createdAt;
+      const effectiveSequence=mobileArrival?.effectiveSequence??ticket.arrivalSequence;
+      const fifoMinutes=Math.max(0,Math.floor((now-Date.parse(effectiveQueueAt))/60000));
+      if(mobileArrival?.enabled)appliedRules.push('R-13');
       const waitWeight = ruleR04?.enabled ? Number(ruleR04?.parameters?.waitWeightPerMinute?.value || 1) : 1;
-      const baseWaitScore = waitMinutes * waitWeight;
+      const baseWaitScore = fifoMinutes * waitWeight;
       if (ruleR04?.enabled) appliedRules.push('R-04');
 
       // 2. PMR Priority (R-01)
@@ -54,20 +60,9 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
 
       // 4. Appointment Punctuality (R-03)
       let appointmentBonus = 0;
-      if (ticket.appointmentTime && ruleR03?.enabled) {
-        const tolMins = Number(ruleR03?.parameters?.arrivalToleranceMinutes?.value || 15);
-        const slotBonus = Number(ruleR03?.parameters?.slotPriority?.value || 60);
-        const [appH, appM] = ticket.appointmentTime.split(':').map(Number);
-        if (!isNaN(appH) && !isNaN(appM)) {
-          const nowDate = new Date(now);
-          const targetDate = new Date(now);
-          targetDate.setHours(appH, appM, 0, 0);
-          const diffMinutes = Math.abs(nowDate.getTime() - targetDate.getTime()) / (1000 * 60);
-          if (diffMinutes <= tolMins) {
-            appointmentBonus = slotBonus;
-            appliedRules.push('R-03');
-          }
-        }
+      if (appointmentWithinTolerance(ticket,rules,now)) {
+        appointmentBonus=Number(ruleR03?.parameters?.slotPriority?.value??60);
+        appliedRules.push('R-03');
       }
 
       // 5. Dynamic SLA Escalation (R-06)
@@ -91,6 +86,7 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
 
       breakdowns.push({
         ticket,
+        mobileArrival:mobileArrival||undefined,effectiveQueueAt,effectiveSequence,
         baseWaitScore,
         pmrBonus,
         vipBonus,
@@ -112,7 +108,7 @@ export function evaluateTickets(tickets: QueueTicket[], counters: CounterStation
       if (b.totalScore !== a.totalScore) {
         return b.totalScore - a.totalScore;
       }
-      return new Date(a.ticket.confirmedAt || a.ticket.createdAt).getTime() - new Date(b.ticket.confirmedAt || b.ticket.createdAt).getTime();
+      return Date.parse(a.effectiveQueueAt!) - Date.parse(b.effectiveQueueAt!) || (a.effectiveSequence!=null&&b.effectiveSequence!=null?a.effectiveSequence-b.effectiveSequence:0);
     });
 
     breakdowns.forEach((b, idx) => {

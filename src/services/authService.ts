@@ -253,7 +253,7 @@ class AuthService {
           success: false,
           requirePin: true,
           user,
-          error: 'Code PIN incorrect. Veuillez vérifier votre code (Master PIN : 9999).',
+          error: 'Code PIN incorrect. Veuillez vérifier votre code.',
         };
       }
     }

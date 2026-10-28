@@ -494,7 +494,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5 text-purple-400" />
-            <span>Règles Métier (12)</span>
+            <span>Règles Métier ({config.rules?.length || configService.getRules().length})</span>
           </button>
 
           <button

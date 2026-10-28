@@ -1,3 +1,6 @@
+import {capturePhoneQueueState,estimatePhoneTicket,refreshPhoneQueueOnResume} from '../../services/phoneQueueState';
+import {MobileArrivalNote} from '../common/MobileArrivalNote';
+import {DEFAULT_QUEUE_RULES} from '../../config/defaultQueueRules';
 import {ParallelServiceNote} from '../common/ParallelServiceNote';
 import {matchesClientTicket} from '../../utils/queueValidation';
 import {kioskPresenceToken} from '../../utils/queueValidation';
@@ -75,7 +78,10 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
     new Date(Date.now() + 86400000).toISOString().split('T')[0]
   );
   const [appointmentTime, setAppointmentTime] = useState<string>('09:30');
-  const [ticketsList, setTicketsList] = useState<QueueTicket[]>(() => queueStore.getState().tickets);
+  const [phoneQueue, setPhoneQueue] = useState(() => capturePhoneQueueState(queueStore.getState()));
+  const ticketsList = phoneQueue.tickets;
+
+  useEffect(() => refreshPhoneQueueOnResume(() => queueStore.fetchServerState()), []);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Live calculation of booked exclusive slots for the chosen date (1 person max per slot)
@@ -202,7 +208,8 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
   // Subscribe to queue changes to keep myTicket live and react IMMEDIATELY to teller calls
   useEffect(() => {
     const unsub = queueStore.subscribe((state) => {
-      setTicketsList([...state.tickets]);
+      const snapshot = capturePhoneQueueState(state);
+      setPhoneQueue((previous) => snapshot.syncStatus === 'online' ? snapshot : {...snapshot, observedAt: previous.observedAt});
 
       let activeToken = myTicketRef.current?.tokenNumber;
       if (!activeToken && typeof window !== 'undefined') {
@@ -369,7 +376,7 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
 
   const hasSubmittedFeedback = feedbackSubmitted || Boolean(myTicket?.feedback);
   const canGiveFeedback = myTicket?.status === 'completed' && !hasSubmittedFeedback;
-  const estimate = myTicket ? queueStore.getTicketEstimate(myTicket) : { peopleAhead: 0, estimatedMinutes: 0 };
+  const estimate = useMemo(() => estimatePhoneTicket(myTicket, phoneQueue, {...config, categories}), [myTicket, phoneQueue, config, categories]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between">
@@ -1221,6 +1228,7 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
                     )}
                   </div>
                   <ParallelServiceNote {...estimate} requiresPresence={myTicket.status === 'pending_presence'} />
+                  <MobileArrivalNote ticket={phoneQueue.tickets.find(t=>t.id===myTicket.id)||myTicket} tickets={phoneQueue.tickets} rules={config.rules||DEFAULT_QUEUE_RULES} now={phoneQueue.observedAt} />
                 </div>
               )}
 
@@ -1292,8 +1300,8 @@ export const ClientWebApp: React.FC<ClientWebAppProps> = ({
 
               {/* SYNCHRONIZATION PULSE BADGE */}
               <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-medium mb-6">
-                <span className={`w-2 h-2 rounded-full ${queueStore.getState().syncStatus === 'online' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                <span>{queueStore.getState().syncStatus === 'online' ? 'Synchronisé avec le serveur de l’agence' : queueStore.getState().syncStatus === 'offline' ? 'Connexion interrompue — actions indisponibles' : 'Connexion au serveur…'}</span>
+                <span className={`w-2 h-2 rounded-full ${phoneQueue.syncStatus === 'online' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span>{phoneQueue.syncStatus === 'online' ? 'Synchronisé avec le serveur de l’agence' : phoneQueue.syncStatus === 'offline' ? 'Connexion interrompue — actions indisponibles' : 'Connexion au serveur…'}</span>
               </div>
 
               {/* ACTION BUTTONS: FEEDBACK IF COMPLETED, LEAVE QUEUE IF WAITING */}
